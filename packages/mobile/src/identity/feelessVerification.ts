@@ -754,6 +754,11 @@ function* startOrResumeKomenciSession(komenciKit: KomenciKit, e164Number: string
       })
     )
 
+    Logger.debug(
+      TAG,
+      'Session active. sessionToken: ',
+      sessionToken || komenciSessionResult.result.token
+    )
     // Fetch session state now that we are sure to have a token
     yield call(fetchKomenciSessionState, komenciKit, e164Number)
   }
