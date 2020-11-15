@@ -238,6 +238,9 @@ export default function DrawerNavigator() {
       initialRouteName={Screens.WalletHome}
       drawerContent={drawerContent}
       backBehavior={'initialRoute'}
+      screenOptions={{
+        headerShown: false,
+      }}
       drawerContentOptions={{
         labelStyle: [fontStyles.regular, { marginLeft: -20, fontWeight: 'normal' }],
         activeBackgroundColor: colors.gray2,
