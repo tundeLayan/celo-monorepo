@@ -31,7 +31,7 @@ function getCiphertextLabel(
   const senderPublicKeyBuffer = Buffer.from(ensureCompressed(senderPublicKey), 'hex')
   const receiverPublicKeyBuffer = Buffer.from(ensureCompressed(receiverPublicKey), 'hex')
 
-  const label = createHmac('blake2s256', sharedSecret)
+  const label = createHmac('sha256', sharedSecret)
     .update(Buffer.concat([senderPublicKeyBuffer, receiverPublicKeyBuffer, Buffer.from(path)]))
     .digest('hex')
   return join(sep, 'ciphertexts', label)
@@ -160,6 +160,27 @@ export const writeEncrypted = async (
     await Promise.all(
       // here we encrypt the key to ourselves so we can retrieve it later
       [wrapper.self, ...toAddresses].map(async (toAddress) =>
+        distributeSymmetricKey(wrapper, dataPath, fetchKey.result, toAddress)
+      )
+    )
+  ).find(Boolean)
+  return firstWriteError
+}
+
+export const writeSymmetricKeys = async (
+  wrapper: OffchainDataWrapper,
+  dataPath: string,
+  toAddresses: Address[],
+  symmetricKey?: Buffer
+): Promise<SchemaErrors | void> => {
+  const fetchKey = await fetchOrGenerateKey(wrapper, dataPath, symmetricKey)
+  if (!fetchKey.ok) {
+    return fetchKey.error
+  }
+
+  const firstWriteError = (
+    await Promise.all(
+      toAddresses.map(async (toAddress) =>
         distributeSymmetricKey(wrapper, dataPath, fetchKey.result, toAddress)
       )
     )
