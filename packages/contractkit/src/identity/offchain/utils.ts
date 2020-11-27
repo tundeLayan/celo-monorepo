@@ -8,7 +8,7 @@ import { keccak256 } from 'ethereumjs-util'
 import { isLeft } from 'fp-ts/lib/Either'
 import * as t from 'io-ts'
 import { join, sep } from 'path'
-import OffchainDataWrapper, { OffchainErrorTypes } from '../offchain-data-wrapper'
+import { OffchainDataWrapper, OffchainErrorTypes } from '../offchain-data-wrapper'
 import {
   InvalidDataError,
   InvalidKey,
@@ -113,7 +113,8 @@ async function fetchOrGenerateKey(
 
   if (
     existingKey.error.errorType === SchemaErrorTypes.OffchainError &&
-    existingKey.error.error.errorType === OffchainErrorTypes.NoStorageRootProvidedData
+    (existingKey.error.error.errorType === OffchainErrorTypes.NoStorageRootProvidedData ||
+      existingKey.error.error.errorType === OffchainErrorTypes.FetchError)
   ) {
     return Ok(randomBytes(16))
   }
