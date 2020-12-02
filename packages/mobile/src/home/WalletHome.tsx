@@ -15,12 +15,8 @@ import {
 import Animated from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { connect } from 'react-redux'
-import { migrateAccount } from 'src/account/actions'
-import { needsToMigrateToNewBip39 } from 'src/account/selectors'
 import { showMessage } from 'src/alert/actions'
 import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
-import { exitBackupFlow } from 'src/app/actions'
-import Dialog from 'src/components/Dialog'
 import { ALERT_BANNER_DURATION, DEFAULT_TESTNET, SHOW_TESTNET_BANNER } from 'src/config'
 import { CURRENCY_ENUM } from 'src/geth/consts'
 import { refreshAllBalances, setLoading } from 'src/home/actions'
@@ -48,17 +44,14 @@ interface StateProps {
   recipientCache: NumberToRecipient
   appConnected: boolean
   numberVerified: boolean
-  needsToMigrateToNewBip39: boolean
 }
 
 interface DispatchProps {
   refreshAllBalances: typeof refreshAllBalances
   initializeSentryUserContext: typeof initializeSentryUserContext
-  exitBackupFlow: typeof exitBackupFlow
   setLoading: typeof setLoading
   showMessage: typeof showMessage
   importContacts: typeof importContacts
-  migrateAccount: typeof migrateAccount
 }
 
 type Props = StateProps & DispatchProps & WithTranslation
@@ -66,11 +59,9 @@ type Props = StateProps & DispatchProps & WithTranslation
 const mapDispatchToProps = {
   refreshAllBalances,
   initializeSentryUserContext,
-  exitBackupFlow,
   setLoading,
   showMessage,
   importContacts,
-  migrateAccount,
 }
 
 const mapStateToProps = (state: RootState): StateProps => ({
@@ -81,7 +72,6 @@ const mapStateToProps = (state: RootState): StateProps => ({
   recipientCache: recipientCacheSelector(state),
   appConnected: isAppConnected(state),
   numberVerified: state.app.numberVerified,
-  needsToMigrateToNewBip39: needsToMigrateToNewBip39(state),
 })
 
 const AnimatedSectionList = Animated.createAnimatedComponent(SectionList)
@@ -152,13 +142,9 @@ export class WalletHome extends React.Component<Props, State> {
       t('testnetAlert.1', { testnet: _.startCase(DEFAULT_TESTNET) }),
       ALERT_BANNER_DURATION,
       null,
+      null,
       t('testnetAlert.0', { testnet: _.startCase(DEFAULT_TESTNET) })
     )
-  }
-
-  migrateAccount = () => {
-    this.setState({ isMigrating: true })
-    this.props.migrateAccount()
   }
 
   render() {
@@ -204,15 +190,6 @@ export class WalletHome extends React.Component<Props, State> {
           keyExtractor={this.keyExtractor}
         />
         <SendOrRequestBar />
-        <Dialog
-          title={'Migrate to new Address'}
-          children={
-            'Due to a developer configuration error, you will need to migrate your account to a new address, which will include verifying again. You can keep your seed phrase. Do not close the app during migration. Please post on slack if you have questions.'
-          }
-          actionText={'Migrate'}
-          actionPress={this.migrateAccount}
-          isVisible={this.props.needsToMigrateToNewBip39 && !this.state.isMigrating}
-        />
       </SafeAreaView>
     )
   }

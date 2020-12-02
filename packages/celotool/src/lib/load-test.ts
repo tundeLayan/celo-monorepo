@@ -41,7 +41,7 @@ export async function upgradeHelmChart(
 }
 
 export async function removeHelmRelease(celoEnv: string) {
-  return removeGenericHelmChart(celoEnv + '-load-test')
+  return removeGenericHelmChart(`${celoEnv}-load-test`, celoEnv)
 }
 
 async function helmParameters(

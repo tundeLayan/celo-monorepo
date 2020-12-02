@@ -4,8 +4,8 @@
  * Leaving the name for recognizability to current devs
  */
 import { ContractKit, newKitFromWeb3 } from '@celo/contractkit'
-import { UnlockableWallet } from '@celo/contractkit/lib/wallets/wallet'
 import { sleep } from '@celo/utils/src/async'
+import { UnlockableWallet } from '@celo/wallet-base'
 import GethBridge from 'react-native-geth'
 import { call, delay, select } from 'redux-saga/effects'
 import { ContractKitEvents } from 'src/analytics/Events'
@@ -14,7 +14,7 @@ import { ErrorMessages } from 'src/app/ErrorMessages'
 import { DEFAULT_FORNO_URL } from 'src/config'
 import { isProviderConnectionError } from 'src/geth/geth'
 import { GethNativeBridgeWallet } from 'src/geth/GethNativeBridgeWallet'
-import { waitForGethInitialized } from 'src/geth/saga'
+import { waitForGethInitialized, waitForGethSync, waitForGethSyncAsync } from 'src/geth/saga'
 import { navigateToError } from 'src/navigator/NavigationService'
 import Logger from 'src/utils/Logger'
 import { getHttpProvider, getIpcProvider } from 'src/web3/providers'
@@ -80,6 +80,7 @@ export function* initContractKit() {
         `${TAG}@initContractKit`,
         `Initialized wallet with accounts: ${wallet?.getAccounts()}`
       )
+
       contractKit = newKitFromWeb3(web3, wallet)
       Logger.info(`${TAG}@initContractKit`, 'Initialized kit')
       ValoraAnalytics.track(ContractKitEvents.init_contractkit_finish)
@@ -134,7 +135,7 @@ async function waitForContractKit(tries: number) {
   return contractKit
 }
 
-export function* getContractKit() {
+export function* getContractKit(waitForSync: boolean = true) {
   if (!contractKit) {
     if (initContractKitLock) {
       yield call(waitForContractKit, WAIT_FOR_CONTRACT_KIT_RETRIES)
@@ -143,16 +144,26 @@ export function* getContractKit() {
       yield call(initContractKit)
     }
   }
+
+  if (waitForSync) {
+    yield call(waitForGethSync)
+  }
+
   return contractKit
 }
 
 // Used for cases where CK must be access outside of a saga
-export async function getContractKitAsync(): Promise<ContractKit> {
+export async function getContractKitAsync(waitForSync: boolean = true): Promise<ContractKit> {
   await waitForContractKit(WAIT_FOR_CONTRACT_KIT_RETRIES)
   if (!contractKit) {
     Logger.warn(`${TAG}@getContractKitAsync`, 'contractKit is undefined')
     throw new Error('contractKit is undefined')
   }
+
+  if (waitForSync) {
+    await waitForGethSyncAsync()
+  }
+
   return contractKit
 }
 
@@ -186,13 +197,13 @@ export async function getWalletAsync() {
 }
 
 // Convinience util for getting the kit's web3 instance
-export function* getWeb3() {
-  const kit: ContractKit = yield call(getContractKit)
-  return kit.web3
+export function* getWeb3(waitForSync: boolean = true) {
+  const kit: ContractKit = yield call(getContractKit, waitForSync)
+  return kit.connection.web3
 }
 
 // Used for cases where the kit's web3 must be accessed outside a saga
-export async function getWeb3Async(): Promise<Web3> {
-  const kit = await getContractKitAsync()
-  return kit.web3
+export async function getWeb3Async(waitForSync: boolean = true): Promise<Web3> {
+  const kit = await getContractKitAsync(waitForSync)
+  return kit.connection.web3
 }

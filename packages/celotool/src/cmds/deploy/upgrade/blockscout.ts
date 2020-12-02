@@ -3,11 +3,10 @@ import {
   createDefaultIngressIfNotExists,
   getInstanceName,
   getReleaseName,
-  scaleDownBlockscout,
   upgradeHelmChart,
 } from 'src/lib/blockscout'
 import { switchToClusterFromEnv } from 'src/lib/cluster'
-import { execCmdWithExitOnFailure } from 'src/lib/cmd-utils'
+import { execCmd } from 'src/lib/cmd-utils'
 import { envVar, fetchEnvOrFallback } from 'src/lib/env-utils'
 import { retrieveCloudSQLConnectionInfo } from 'src/lib/helm_deploy'
 import yargs from 'yargs'
@@ -48,19 +47,19 @@ export const handler = async (argv: BlockscoutUpgradeArgv) => {
     )
     blockscoutResetDB = true
 
-    // await removeHelmRelease(helmReleaseName)
-    await scaleDownBlockscout(argv.celoEnv, helmReleaseName)
+    //await removeHelmRelease(helmReleaseName, argv.celoEnv)
 
     console.info('Sleep for 30 seconds to have all connections killed')
     await sleep(30000)
-  }
-
-  try {
-    // Delete the job to force it run again when deploying the helm chart
-    const jobName = `${argv.celoEnv}-blockscout${dbSuffix}-migration`
-    await execCmdWithExitOnFailure(`kubectl delete job ${jobName} -n ${argv.celoEnv}`)
-  } catch (error) {
-    console.error(error)
+    //await resetCloudSQLInstance(instanceName)
+  } else {
+    console.info(`Delete blockscout-migration`)
+    try {
+      const jobName = `${argv.celoEnv}-blockscout${dbSuffix}-migration`
+      await execCmd(`kubectl delete job ${jobName} -n ${argv.celoEnv}`)
+    } catch (error) {
+      console.error(error)
+    }
   }
   await upgradeHelmChart(
     argv.celoEnv,

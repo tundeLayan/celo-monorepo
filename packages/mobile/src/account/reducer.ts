@@ -1,10 +1,11 @@
 import { isE164Number } from '@celo/utils/src/phoneNumbers'
 import { Actions, ActionTypes } from 'src/account/actions'
+import { DAYS_TO_DELAY } from 'src/backup/utils'
 import { DEV_SETTINGS_ACTIVE_INITIALLY } from 'src/config'
 import { features } from 'src/flags'
 import { getRehydratePayload, REHYDRATE, RehydrateAction } from 'src/redux/persist-helper'
 import Logger from 'src/utils/Logger'
-import { getRemoteTime } from 'src/utils/time'
+import { getRemoteTime, ONE_DAY_IN_MILLIS } from 'src/utils/time'
 import { Actions as Web3Actions, ActionTypes as Web3ActionTypes } from 'src/web3/actions'
 
 export interface State {
@@ -17,10 +18,9 @@ export interface State {
   photosNUXClicked: boolean
   pincodeType: PincodeType
   isSettingPin: boolean
-  accountCreationTime: number
   backupCompleted: boolean
-  backupDelayedTime: number
-  socialBackupCompleted: boolean
+  accountCreationTime: number
+  backupRequiredTime: number | null
   dismissedInviteFriends: boolean
   dismissedGetVerified: boolean
   dismissedGoldEducation: boolean
@@ -55,9 +55,8 @@ export const initialState = {
   pincodeType: PincodeType.Unset,
   isSettingPin: false,
   accountCreationTime: 99999999999999,
+  backupRequiredTime: null,
   backupCompleted: false,
-  backupDelayedTime: 0,
-  socialBackupCompleted: false,
   dismissedInviteFriends: false,
   dismissedGetVerified: false,
   dismissedGoldEducation: false,
@@ -159,19 +158,13 @@ export const reducer = (
     case Actions.SET_BACKUP_DELAYED:
       return {
         ...state,
-        backupDelayedTime: getRemoteTime(),
-      }
-    case Actions.SET_SOCIAL_BACKUP_COMPLETED:
-      return {
-        ...state,
-        socialBackupCompleted: true,
+        backupRequiredTime: getRemoteTime() + DAYS_TO_DELAY * ONE_DAY_IN_MILLIS,
       }
     case Actions.TOGGLE_BACKUP_STATE:
       return {
         ...state,
         backupCompleted: !state.backupCompleted,
-        socialBackupCompleted: false,
-        backupDelayedTime: 0,
+        backupRequiredTime: null,
       }
     case Actions.DISMISS_INVITE_FRIENDS:
       return {
