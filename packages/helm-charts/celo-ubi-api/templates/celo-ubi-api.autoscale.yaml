@@ -1,0 +1,22 @@
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: celo-ubi
+    chart: celo-ubi
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: celo-ubi-api-autoscaler
+spec:
+  minReplicas: {{ .Values.celoubi.api.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.celoubi.api.autoscaling.maxReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: {{ .Values.celoubi.api.autoscaling.target.cpu }}

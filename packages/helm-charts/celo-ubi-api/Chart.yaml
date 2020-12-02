@@ -1,0 +1,10 @@
+name: celoubi
+version: 0.0.1
+description: Chart which is used to deploy the UBI API
+keywords:
+- ethereum
+- blockchain
+- grant
+- ubi
+- mocafi
+appVersion: v1.0.0

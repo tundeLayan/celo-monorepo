@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: celo-ubi
+    chart: celo-ubi
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: celo-ubi-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celo-ubi
+      release: {{ .Release.Name }}
+      component: celo-ubi-api
+  template:
+    metadata:
+      labels:
+        app: celo-ubi
+        release: {{ .Release.Name }}
+        component: celo-ubi-api
+    spec:
+      containers:
+      - name: celo-ubi-api
+        image: {{ .Values.celoubi.api.image.repository }}:{{ .Values.celoubi.api.image.tag }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 150m
+        ports:
+        - name: http
+          containerPort: {{ .Values.celoubi.api.port }}
+        env:
+        - name: CELO_UBI_RPC_HOST
+          value: {{ .Values.celoubi.api.rpcHost | quote }}
+        - name: CELO_UBI_ADDRESS
+          value: {{ .Values.celoubi.api.contractAddress | quote }}

@@ -1,0 +1,35 @@
+{{- if .Capabilities.APIVersions.Has "networking.k8s.io/v1beta1" }}
+apiVersion: networking.k8s.io/v1beta1
+{{ else }}
+apiVersion: extensions/v1beta1
+{{ end -}}
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  labels:
+    app: celo-ubi
+    chart: celo-ubi
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: celo-ubi-api-ingress
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      location ~ /admin/.* {
+        deny all;
+      }    
+spec:
+  tls:
+  - hosts:
+    - {{ .Release.Name }}.{{ .Values.celoubi.api.domain.name }}.org
+    secretName: {{ .Release.Name }}-tls
+  rules:
+  - host: {{ .Release.Name }}.{{ .Values.celoubi.api.domain.name }}.org
+    http:
+      paths:
+      - path: /health
+        backend:
+          serviceName: {{ .Release.Name }}
+          servicePort: {{ .Values.celoubi.api.port }}

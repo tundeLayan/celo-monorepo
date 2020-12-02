@@ -1,0 +1,23 @@
+imagePullPolicy: IfNotPresent
+# imagePullPolicy: Never # Only use this for local development after building the docker image a minikube environment
+
+# Node labels for pod assignment
+# ref: https://kubernetes.io/docs/user-guide/node-selection/
+nodeSelector: {}
+
+celoubi:
+  api:
+    image:
+      repository: gcr.io/celo-testnet/celo-ubi-api
+      tag: latest
+    port: 3000
+    rpcHost: http://localhost:7545
+    contractAddress: 0x8B240f54e162C1Fe2B0F289249e0B81484477f80
+    mnemonic: "business win airport wall cruel bomb modify satisfy robot dwarf urban skate"
+    domain: 
+      name: ubi
+    autoscaling:
+      minReplicas: 1
+      maxReplicas: 10
+      target:
+        cpu: 80
