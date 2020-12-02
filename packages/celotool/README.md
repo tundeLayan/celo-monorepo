@@ -96,3 +96,15 @@ a few useful commands to make running a node really easy.
 
 - Install Helm 2.14.0 from https://get.helm.sh/ (Homebrew lacks this version.)
   To get past the Unidentified Developer error: open the directory containing helm, then ctrl-click helm and select Open then Open again. Repeat for tiller.
+
+#### Add a new package 
+
+1. Create your complete Helm chart under the monorepo under `celo-monorepo/packages/helm-charts/<new project>`
+2. Depending on which target project, create a new `celo-monorepo/.env.<new project>` (or append to an existing project file) under the monorepo root.
+3. If required, repeat for a `celo-monorepo/.env.mnemonic.<new project>` (or append to existing profile `.mnemonic` file)
+4. If you have created a new `.env.mnemonic.<new project>` file, add your filename to the encryption list file under `celo-monorepo/scripts/key_placer.sh` and encrypt your new file using the `yarn keys:encrypt` command.
+5. Create a new file under `celo-monorepo/packages/celotool/src/lib/<new project>.ts` for Helm release commands and project parameterization
+6. Create file for new project for the various deploy stages:
+  * `celo-monorepo/packages/celotool/src/cmds/deploy/initial/<new project>.ts`
+  * `celo-monorepo/packages/celotool/src/cmds/deploy/upgrade/<new project>.ts`
+  * `celo-monorepo/packages/celotool/src/cmds/deploy/destroy/<new project>.ts`
