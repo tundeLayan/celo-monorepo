@@ -56,7 +56,7 @@ const DefaultConfig = {
   },
   election: {
     minElectableValidators: '1',
-    maxElectableValidators: '100',
+    maxElectableValidators: '60',
     maxVotesPerAccount: 10,
     electabilityThreshold: 1 / 1000,
     frozen: false,
@@ -208,7 +208,7 @@ const NetworkConfigs = {
     },
     election: {
       minElectableValidators: '3',
-      maxElectableValidators: '100',
+      maxElectableValidators: '60',
       frozen: false,
     },
     epochRewards: {
@@ -455,7 +455,7 @@ const NetworkConfigs = {
     },
     election: {
       minElectableValidators: '22',
-      maxElectableValidators: '100',
+      maxElectableValidators: '60',
       maxVotesPerAccount: 10,
       electabilityThreshold: 1 / 1000,
       frozen: true,
