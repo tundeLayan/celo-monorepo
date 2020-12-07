@@ -7,13 +7,13 @@ metadata:
     chart: celo-ubi
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
-    component: celo-ubi-api
+    component: celo-ubi-api-service
 spec:
   selector:
     app: celo-ubi
     release: {{ .Release.Name }}
-    component: celo-ubi-api
-  clusterIP: None
+    component: celo-ubi
+  type: ClusterIP
   ports:
   - name: http
     port: {{ .Values.celoubi.api.port }}

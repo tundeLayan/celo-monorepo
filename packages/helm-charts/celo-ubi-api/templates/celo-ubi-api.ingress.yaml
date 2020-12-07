@@ -5,7 +5,7 @@ apiVersion: extensions/v1beta1
 {{ end -}}
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}-ingress
+  name: {{ .Release.Name }}
   labels:
     app: celo-ubi
     chart: celo-ubi
@@ -29,7 +29,7 @@ spec:
   - host: {{ .Release.Name }}.{{ .Values.celoubi.api.domain.name }}.org
     http:
       paths:
-      - path: /health
+      - path: /(health|settle|authorize|reconcile|user)
         backend:
           serviceName: {{ .Release.Name }}
           servicePort: {{ .Values.celoubi.api.port }}

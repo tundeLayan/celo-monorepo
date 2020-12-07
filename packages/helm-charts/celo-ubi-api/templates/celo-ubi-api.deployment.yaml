@@ -7,23 +7,23 @@ metadata:
     chart: celo-ubi
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
-    component: celo-ubi-api
+    component: celo-ubi-api-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: celo-ubi
       release: {{ .Release.Name }}
-      component: celo-ubi-api
+      component: celo-ubi
   template:
     metadata:
       labels:
         app: celo-ubi
         release: {{ .Release.Name }}
-        component: celo-ubi-api
+        component: celo-ubi
     spec:
       containers:
-      - name: celo-ubi-api
+      - name: celo-ubi
         image: {{ .Values.celoubi.api.image.repository }}:{{ .Values.celoubi.api.image.tag }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         resources:
@@ -38,3 +38,8 @@ spec:
           value: {{ .Values.celoubi.api.rpcHost | quote }}
         - name: CELO_UBI_ADDRESS
           value: {{ .Values.celoubi.api.contractAddress | quote }}
+        - name: CELO_UBI_MNEMONIC
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}
+              key: MNEMONIC

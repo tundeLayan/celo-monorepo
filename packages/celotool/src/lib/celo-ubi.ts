@@ -39,7 +39,7 @@ async function helmParameters() {
     `--set domain.name=${fetchEnv(envVar.CLUSTER_DOMAIN_NAME)}`,
     `--set celotool.image.repository=${fetchEnv(envVar.CELOTOOL_DOCKER_IMAGE_REPOSITORY)}`,
     `--set celotool.image.tag=${fetchEnv(envVar.CELOTOOL_DOCKER_IMAGE_TAG)}`,
-    `--set mnemonic="${fetchEnv(envVar.CELO_UBI_MNEMONIC)}"`,
+    `--set celoubi.api.mnemonic="${fetchEnv(envVar.CELO_UBI_MNEMONIC)}"`,
     `--set celoubi.api.image.repository=${fetchEnv(envVar.CELO_UBI_DOCKER_IMAGE_REPOSITORY)}`,
     `--set celoubi.api.image.tag=${fetchEnv(envVar.CELO_UBI_DOCKER_IMAGE_TAG)}`,
     `--set celoubi.api.contractAddress=${fetchEnv(envVar.CELO_UBI_ADDRESS)}`,
