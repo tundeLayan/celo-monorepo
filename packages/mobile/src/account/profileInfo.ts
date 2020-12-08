@@ -17,9 +17,9 @@ import {
 } from '@celo/utils/src/address'
 import { recoverEIP712TypedDataSigner } from '@celo/utils/src/signatureUtils'
 import { SignedPostPolicyV4Output } from '@google-cloud/storage'
-import FormData from 'form-data'
+// Use targetted import otherwise the RN FormData gets used which doesn't support Buffer related functionality
+import FormData from 'form-data/lib/form_data'
 import * as t from 'io-ts'
-import fetch from 'node-fetch'
 import { call, put, select } from 'redux-saga/effects'
 import { profileUploaded } from 'src/account/actions'
 import { nameSelector } from 'src/account/selectors'
@@ -74,6 +74,47 @@ async function makeCall(data: any, signature: string): Promise<SignedPostPolicyV
   return response.json()
 }
 
+// Workaround fetch response.arrayBuffer() not working in RN environment
+// See https://github.com/facebook/react-native/blob/f96478778cc00da8c11da17f9591dbdf928e7437/Libraries/Blob/FileReader.js#L85
+async function responseBuffer(response: Response) {
+  let blob: Blob | undefined
+  try {
+    blob = await response.blob()
+    return blobToBuffer(blob)
+  } catch (error) {
+    throw error
+  } finally {
+    // close() does exist in RN and needs to be invoked
+    // See https://github.com/facebook/react-native/blob/b26a9549ce2dffd1d0073ae13502830459051c27/Libraries/Blob/Blob.js#L123
+    // @ts-ignore
+    blob?.close()
+  }
+}
+
+// Hacky way to get Buffer from Blob
+// Note: this is gonna transfer the whole data over the RN bridge (as base64 encoded string)
+// and should be avoided for large files!
+function blobToBuffer(blob: Blob) {
+  const reader = new FileReader()
+  reader.readAsDataURL(blob)
+  return new Promise<Buffer>((resolve, reject) => {
+    reader.onerror = () => {
+      reject(reader.error)
+    }
+    reader.onloadend = () => {
+      const result = reader.result
+      if (typeof result !== 'string') {
+        reject(new Error('Unexpected result type'))
+      } else {
+        // Result looks like "data:application/octet-stream;base64,BLMHTkM..."
+        // Extract the base64 part
+        const base64 = result.substr(result.lastIndexOf(',') + 1)
+        resolve(Buffer.from(base64, 'base64'))
+      }
+    }
+  })
+}
+
 class UploadServiceDataWrapper implements OffchainDataWrapper {
   signer: Address
   self: Address
@@ -112,11 +153,12 @@ class UploadServiceDataWrapper implements OffchainDataWrapper {
 
         return fetch(url, {
           method: 'POST',
-          headers: {
-            enctype: 'multipart/form-data',
-          },
-          // @ts-ignore
-          body: formData,
+          headers: formData.getHeaders(),
+          // Use getBuffer() which ends up transferring the body as base64 data over the RN bridge
+          // because RN doesn't support Buffer inside FormData
+          // See https://github.com/facebook/react-native/blob/b26a9549ce2dffd1d0073ae13502830459051c27/Libraries/Network/convertRequestBody.js#L34
+          // and https://github.com/facebook/react-native/blob/b26a9549ce2dffd1d0073ae13502830459051c27/Libraries/Network/FormData.js
+          body: formData.getBuffer(),
         }).then((x) => x.text())
       })
     )
@@ -149,8 +191,8 @@ class UploadServiceDataWrapper implements OffchainDataWrapper {
     }
 
     const [dataBody, signatureBody] = await Promise.all([
-      dataResponse.arrayBuffer(),
-      signatureResponse.arrayBuffer(),
+      responseBuffer(dataResponse),
+      responseBuffer(signatureResponse),
     ])
 
     const body = Buffer.from(dataBody)
