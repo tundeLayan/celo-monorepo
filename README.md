@@ -104,7 +104,7 @@ See the [issue backlog](https://github.com/celo-org/celo-monorepo/issues) for a 
 
 ## 📂 <a id="repo"></a>Repo Structure
 
-The repository has the following packages (sub projects):
+The repository had the following packages (sub projects):
 
 - [attestation-service](packages/attestation-service) - service run by validators on the Celo network to send SMS messages, enabling attestations of user phone numbers and their accounts on the Celo network
 - [blockchain-api](packages/blockchain-api) - service that uses Blockscout to present view of transactions by account for Celo Wallet activity feed
