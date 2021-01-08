@@ -256,6 +256,45 @@ export function appRemoteFeatureFlagChannel() {
   })
 }
 
+export async function knownAddressesChannel() {
+  return simpleReadChannel('addressesExtraInfo')
+}
+
+export async function notificationsChannel() {
+  return simpleReadChannel('notifications')
+}
+
+function simpleReadChannel(key: string) {
+  if (!FIREBASE_ENABLED) {
+    return null
+  }
+
+  const errorCallback = (error: Error) => {
+    Logger.warn(TAG, error.toString())
+  }
+
+  return eventChannel((emit: any) => {
+    const emitter = (snapshot: FirebaseDatabaseTypes.DataSnapshot) => {
+      const value = snapshot.val()
+      Logger.debug(`Got value from Firebase for key ${key}: ${JSON.stringify(value)}`)
+      emit(value || {})
+    }
+    const cancel = () => {
+      firebase
+        .database()
+        .ref(key)
+        .off(VALUE_CHANGE_HOOK, emitter)
+    }
+
+    firebase
+      .database()
+      .ref(key)
+      .on(VALUE_CHANGE_HOOK, emitter, errorCallback)
+
+    return cancel
+  })
+}
+
 export async function setUserLanguage(address: string, language: string) {
   try {
     Logger.info(TAG, `Setting language selection for user ${address}`)

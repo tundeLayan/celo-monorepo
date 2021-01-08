@@ -2,6 +2,7 @@ import fs from 'fs'
 import { scaleResource } from 'src/lib/kubernetes'
 import { execCmdWithExitOnFailure } from './cmd-utils'
 import { envVar, fetchEnv, fetchEnvOrFallback, isVmBased } from './env-utils'
+import { getCurrentGcloudAccount } from './gcloud_utils'
 import { installGenericHelmChart, removeGenericHelmChart } from './helm_deploy'
 import { outputIncludes } from './utils'
 import { getInternalTxNodeLoadBalancerIP } from './vm-testnet-utils'
@@ -77,6 +78,7 @@ async function helmParameters(
   blockscoutDBConnectionName: string,
   blockscoutResetDB: boolean
 ) {
+  const currentGcloudAccount = await getCurrentGcloudAccount()
   const privateNodes = parseInt(fetchEnv(envVar.PRIVATE_TX_NODES), 10)
   const useMetadataCrawler = fetchEnvOrFallback(
     envVar.BLOCKSCOUT_METADATA_CRAWLER_IMAGE_REPOSITORY,
@@ -84,6 +86,7 @@ async function helmParameters(
   )
   const params = [
     `--set domain.name=${fetchEnv(envVar.CLUSTER_DOMAIN_NAME)}`,
+    `--set blockscout.deployment.account="${currentGcloudAccount}"`,
     `--set blockscout.image.repository=${fetchEnv(envVar.BLOCKSCOUT_DOCKER_IMAGE_REPOSITORY)}`,
     `--set blockscout.image.tag=${fetchEnv(envVar.BLOCKSCOUT_DOCKER_IMAGE_TAG)}`,
     `--set blockscout.db.username=${blockscoutDBUsername}`,

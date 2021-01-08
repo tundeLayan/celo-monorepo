@@ -21,6 +21,8 @@ metadata:
 {{ include "prometheus-stackdriver.labels" .  | indent 4 }}
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: prometheus-server
@@ -38,6 +40,9 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+{{- if not (kindIs "invalid" .Values.serviceAccount.name) }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+{{- end }}
       containers:
         - name: prometheus
           image: prom/prometheus:{{ .Values.prometheus.imageTag }}
@@ -65,13 +70,13 @@ spec:
             - --prometheus.wal-directory=/prometheus/wal
             - --stackdriver.kubernetes.location={{ .Values.gcloud.region }}
             - --stackdriver.kubernetes.cluster-name={{ .Values.cluster }}
-{{ if .Values.includeFilter }}
+{{ if .Values.includeFilter -}}
 {{ indent 12 (printf "- --include=%s" .Values.includeFilter) }}
-{{ end }}
+{{- end -}}
 {{/* This used to be enabled, but now is not. Enable this for oracle clusters only. */}}
-{{ if (and false .Values.stackdriver_metrics_prefix) }}
+{{- if (and false .Values.stackdriver_metrics_prefix) }}
             - --stackdriver.metrics-prefix={{ .Values.stackdriver_metrics_prefix }}
-{{ end }}
+{{- end }}
           ports:
             - name: sidecar
               containerPort: 9091
