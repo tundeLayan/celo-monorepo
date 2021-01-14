@@ -65,6 +65,7 @@ import { Screens } from 'src/navigator/Screens'
 import { default as useSelector } from 'src/redux/useSelector'
 import { stableTokenBalanceSelector } from 'src/stableToken/reducer'
 import Logger from 'src/utils/Logger'
+import WalletConnectScan from 'src/walletConnect/scan'
 import { currentAccountSelector } from 'src/web3/selectors'
 
 const TAG = 'NavigationService'
@@ -274,6 +275,11 @@ export default function DrawerNavigator() {
         name={Screens.BackupIntroduction}
         component={BackupIntroduction}
         options={{ title: t('accountKey'), drawerIcon: AccountKey }}
+      />
+      <Drawer.Screen
+        name={'Scan'}
+        component={WalletConnectScan}
+        options={{ title: 'Scan', drawerIcon: AccountKey }}
       />
       <Drawer.Screen
         name={Screens.FiatExchange}

@@ -77,11 +77,13 @@ export class GethNativeBridgeSigner implements Signer {
   getNativeKey = () => this.account
 
   async unlock(passphrase: string, duration: number): Promise<boolean> {
+    console.log('unlock', passphrase, duration)
     try {
       // Duration in geth should be nanoseconds
       const durationNano = duration * 1000000000
       await this.geth.unlockAccount(this.account, passphrase, durationNano)
     } catch (error) {
+      console.log(error)
       if (error?.message?.toLowerCase()?.includes(INCORRECT_PASSWORD_ERROR)) {
         return false
       }
