@@ -1,8 +1,10 @@
 import colors from '@celo/react-components/styles/colors'
 import fontStyles from '@celo/react-components/styles/fonts'
 import { Spacing } from '@celo/react-components/styles/styles'
+import { EIP712TypedData } from '@celo/utils/src/sign-typed-data-utils'
 import WalletConnect from '@walletconnect/client'
-import { IConnector, IJsonRpcRequest } from '@walletconnect/types'
+import { IConnector, IJsonRpcRequest, ISessionParams } from '@walletconnect/types'
+import BigNumber from 'bignumber.js'
 import React, { useState } from 'react'
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -21,15 +23,23 @@ enum Actions {
 }
 
 function parsePersonalSign(req: IJsonRpcRequest): { from: string; payload: string } {
-  const [from, payload] = req.params
+  const [payload, from] = req.params
   return { from, payload }
+}
+function parseSignTypedData(req: IJsonRpcRequest): { from: string; payload: EIP712TypedData } {
+  const [from, payload] = req.params
+  return { from, payload: JSON.parse(payload) }
+}
+
+function hexToUtf8(hex: string) {
+  return Buffer.from(hex.replace('0x', ''), 'hex').toString()
 }
 
 function Scan(props: any) {
   const [uri, setUri] = useState('')
   const [wc, setWc] = useState<IConnector | null>(null)
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [pendingRequest, setPendingRequest] = useState<IJsonRpcRequest | null>(null)
+  const [pendingSession, setPendingSession] = useState<ISessionParams | null>(null)
   // @ts-ignore
   const account = useSelector((state) => state.web3.account)
   // const { backupCompleted, route, account } = this.props
@@ -40,15 +50,93 @@ function Scan(props: any) {
 
   // console.log('>>>', account, wallet)
 
-  function ConfirmActionModal({
-    isVisible,
-    onConfirm,
-    onCancel,
-  }: {
-    isVisible: boolean
-    onConfirm: any
-    onCancel: any
-  }) {
+  async function handleRequest() {
+    if (!pendingRequest) {
+      return
+    }
+    // console.log('call_request eeee', 'error=', error, 'method=', method, 'params=', params)
+
+    const wallet = await getWalletAsync()
+    if (!wallet.isAccountUnlocked(account)) {
+      const password = await getPassword('000008')
+      await wallet.unlockAccount(account, password, 100000)
+    }
+
+    const { id, method } = pendingRequest
+
+    if (method === Actions.personalSign) {
+      const { payload, from } = parsePersonalSign(pendingRequest)
+      const signature = await wallet.signPersonalMessage(from, payload)
+      wc?.approveRequest({
+        id,
+        result: signature,
+      })
+      setPendingRequest(null)
+      return
+    }
+
+    if (method === Actions.signTypedData) {
+      const { from, payload } = parseSignTypedData(pendingRequest)
+      const signature = await wallet.signTypedData(from, payload)
+      wc?.approveRequest({
+        id,
+        result: signature,
+      })
+      setPendingRequest(null)
+      return
+    }
+
+    if (method === 'eth_sendTransaction') {
+      const [tx] = pendingRequest.params
+      const kit = await getContractKitAsync(false)
+      const sent = await kit.sendTransaction(tx)
+      const hash = await sent.getHash()
+      console.log('hash', hash)
+      wc?.approveRequest({
+        id,
+        result: hash,
+      })
+      setPendingRequest(null)
+      return
+    }
+
+    throw new Error(`Unknown action ${method}`)
+  }
+
+  function InitiateConnectionModal() {
+    return (
+      <Dialog
+        title={`Establish connection with ${pendingSession?.peerMeta?.name}?`}
+        isVisible={!!pendingSession}
+        actionText="Allow"
+        secondaryActionText="Cancel"
+        actionPress={() => {
+          wc?.approveSession({
+            accounts: [account],
+            chainId: 44787,
+          })
+          setPendingSession(null)
+        }}
+        secondaryActionPress={() => {
+          wc?.rejectSession({ message: 'User cancelled' })
+          setPendingSession(null)
+        }}
+      >
+        <Text>
+          {pendingSession?.peerMeta?.name}{' '}
+          {pendingSession?.peerMeta?.description
+            ? `(${pendingSession?.peerMeta?.description}) `
+            : ''}
+          is attempting to establish a connection with your device.
+        </Text>
+        <Text>{'\n'}</Text>
+        <Text>{'\n'}</Text>
+        <Text>Don't be alarmed, every action will still have to be manually approved by you.</Text>
+      </Dialog>
+    )
+  }
+
+  function ConfirmActionModal() {
     if (!pendingRequest) {
       return null
     }
@@ -56,9 +144,46 @@ function Scan(props: any) {
     let body
     if (pendingRequest.method === Actions.personalSign) {
       const { from, payload } = parsePersonalSign(pendingRequest)
+      console.log(hexToUtf8(payload))
       body = (
         <View>
-          <Text>{Buffer.from(payload, 'hex').toString()}</Text>
+          <View>
+            <Text>{wc?.peerMeta?.name} is requesting you sign the following payload:</Text>
+          </View>
+          <View style={{ backgroundColor: colors.goldFaint, padding: 12, marginVertical: 12 }}>
+            <Text>{hexToUtf8(payload)}</Text>
+          </View>
+        </View>
+      )
+    }
+
+    if (pendingRequest.method === Actions.signTypedData) {
+      const { payload } = parseSignTypedData(pendingRequest)
+      body = (
+        <View>
+          <View>
+            <Text>{wc?.peerMeta?.name} is requesting you sign the following payload:</Text>
+          </View>
+
+          <View style={{ backgroundColor: colors.goldFaint, padding: 12, marginVertical: 12 }}>
+            <Text>{JSON.stringify(payload, null, 2)}</Text>
+          </View>
+        </View>
+      )
+    }
+
+    // note this is hard coded to handle CELO transfers right now
+    if (pendingRequest.method === Actions.sendTransaction) {
+      const [tx] = pendingRequest.params
+      const value = new BigNumber(tx.value).toNumber()
+      body = (
+        <View>
+          <View>
+            <Text>{wc?.peerMeta?.name} is requesting transfer the following:</Text>
+          </View>
+
+          <Text>Value (CELO): {value}</Text>
+          <Text>To: {tx.to}</Text>
         </View>
       )
     }
@@ -66,15 +191,18 @@ function Scan(props: any) {
     return (
       <Dialog
         title="Approve Action"
-        isVisible={isVisible}
+        isVisible={!!pendingRequest}
         actionText="Approve"
-        actionPress={onConfirm}
+        actionPress={handleRequest}
         secondaryActionText="Cancel"
-        secondaryActionPress={onCancel}
-        // image={inviteModal}
+        secondaryActionPress={() => setPendingRequest(null)}
         testID="ConfirmActionModal"
       >
-        <Text>Hello hello</Text>
+        {body}
+
+        <View>
+          <Text>Worried about this request? Get in touch with Valora Support</Text>
+        </View>
       </Dialog>
     )
   }
@@ -90,79 +218,28 @@ function Scan(props: any) {
         name: 'Valora',
       },
     })
+    setWc(connector)
 
     connector.on('session_request', (error, payload) => {
       console.log('session_request', error, JSON.stringify(payload, null, 2))
-      connector.approveSession({
-        accounts: [account],
-        chainId: 44787,
-      })
-      setWc(connector)
+      const [session] = payload.params
+      setPendingSession(session)
     })
 
-    connector.on('call_request', async (error, { id, method, params }) => {
-      setShowConfirmModal(true)
-      setPendingRequest({ id, method, params })
-      return
-      console.log('call_request eeee', 'error=', error, 'method=', method, 'params=', params)
-
-      const wallet = await getWalletAsync()
-      const password = await getPassword('000008')
-
-      if (method === 'personal_sign') {
-        const [data, from] = params
-        console.log('unlocked', await wallet.unlockAccount(from, password, 100000))
-        const signature = await wallet.signPersonalMessage(from, data)
-        console.log('got signature', signature)
-        connector.approveRequest({
-          id,
-          result: signature,
-        })
-      }
-
-      if (method === 'eth_signTypedData') {
-        const [from, data] = params
-        console.log('unlocked', await wallet.unlockAccount(from, password, 100000))
-        console.log('parsed data', JSON.parse(data))
-        const signature = await wallet.signTypedData(from, JSON.parse(data))
-        connector.approveRequest({
-          id,
-          result: signature,
-        })
-      }
-
-      if (method === 'eth_sendTransaction') {
-        const [tx] = params
-        console.log('unlocked', await wallet.unlockAccount(tx.from, password, 100000))
-        const kit = await getContractKitAsync(false)
-        const sent = await kit.sendTransaction(tx)
-        const hash = await sent.getHash()
-        // const result = await sendTransactionAsync(tx, tx.from, undefined)
-        // const hash = await result.transactionHash
-        console.log('hash', hash)
-        connector.approveRequest({
-          id,
-          result: hash,
-        })
-      }
-
-      // connector.killSession()
+    connector.on('call_request', async (error, req) => {
+      setPendingRequest(req)
     })
 
     connector.on('disconnect', (error, payload) => {
       console.log('disconnect', error, payload)
-
-      // Delete connector
     })
-
-    console.log('>>>', connector)
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <DrawerTopBar />
-      <ConfirmActionModal isVisible={showConfirmModal} onCancel={() => {}} onConfirm={() => {}} />
-      <Text>Hello</Text>
+      <InitiateConnectionModal />
+      <ConfirmActionModal />
       <TextInput
         style={{
           width: '100%',
