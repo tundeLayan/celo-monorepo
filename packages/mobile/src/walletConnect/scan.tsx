@@ -1,3 +1,5 @@
+import OffchainDataWrapper from '@celo/identity/src/offchain-data-wrapper'
+import { PublicNameAccessor } from '@celo/identity/src/offchain/accessors/name'
 import colors from '@celo/react-components/styles/colors'
 import fontStyles from '@celo/react-components/styles/fonts'
 import { Spacing } from '@celo/react-components/styles/styles'
@@ -11,11 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSelector } from 'react-redux'
 import Dialog from 'src/components/Dialog'
 import DrawerTopBar from 'src/navigator/DrawerTopBar'
-import { navigate } from 'src/navigator/NavigationService'
-import { Screens } from 'src/navigator/Screens'
 import { getPassword } from 'src/pincode/authentication'
 import { getContractKitAsync, getWalletAsync } from 'src/web3/contracts'
-WalletConnect
+
 enum Actions {
   sendTransaction = 'eth_sendTransaction',
   personalSign = 'personal_sign',
@@ -42,6 +42,7 @@ function Scan(props: any) {
   const [pendingSession, setPendingSession] = useState<ISessionParams | null>(null)
   // @ts-ignore
   const account = useSelector((state) => state.web3.account)
+  const [requestMetadata, setRequestMetadata] = useState<{ to: string } | null>(null)
   // const { backupCompleted, route, account } = this.props
   // const navigatedFromSettings = route.params?.navigatedFromSettings
 
@@ -57,10 +58,10 @@ function Scan(props: any) {
     // console.log('call_request eeee', 'error=', error, 'method=', method, 'params=', params)
 
     const wallet = await getWalletAsync()
-    if (!wallet.isAccountUnlocked(account)) {
-      const password = await getPassword('000008')
-      await wallet.unlockAccount(account, password, 100000)
-    }
+    // if (!wallet.isAccountUnlocked(account)) {
+    const password = await getPassword('000008')
+    await wallet.unlockAccount(account, password, 100000)
+    // }
 
     const { id, method } = pendingRequest
 
@@ -143,8 +144,7 @@ function Scan(props: any) {
 
     let body
     if (pendingRequest.method === Actions.personalSign) {
-      const { from, payload } = parsePersonalSign(pendingRequest)
-      console.log(hexToUtf8(payload))
+      const { payload } = parsePersonalSign(pendingRequest)
       body = (
         <View>
           <View>
@@ -182,8 +182,8 @@ function Scan(props: any) {
             <Text>{wc?.peerMeta?.name} is requesting transfer the following:</Text>
           </View>
 
-          <Text>Value (CELO): {value}</Text>
-          <Text>To: {tx.to}</Text>
+          <Text style={{ paddingTop: 36 }}>Value (CELO): {value}</Text>
+          <Text>To: {requestMetadata ? `${requestMetadata.to} (${tx.to})` : tx.to}</Text>
         </View>
       )
     }
@@ -200,8 +200,10 @@ function Scan(props: any) {
       >
         {body}
 
-        <View>
-          <Text>Worried about this request? Get in touch with Valora Support</Text>
+        <View style={{ paddingTop: 48 }}>
+          <Text style={{ color: colors.gray5 }}>
+            Worried about this request? Get in touch with Valora Support
+          </Text>
         </View>
       </Dialog>
     )
@@ -227,6 +229,17 @@ function Scan(props: any) {
     })
 
     connector.on('call_request', async (error, req) => {
+      // get request metadata if it exists
+      console.log(req)
+      if (req.params[0].to) {
+        const wrapper = new OffchainDataWrapper(account, await getContractKitAsync(true))
+        const name = new PublicNameAccessor(wrapper)
+        const offchainReadResult = await name.readAsResult(req.params[0].to)
+        if (offchainReadResult.ok) {
+          setRequestMetadata({ to: offchainReadResult.result.name })
+        }
+      }
+
       setPendingRequest(req)
     })
 
@@ -254,14 +267,6 @@ function Scan(props: any) {
       <Button title="Initiate" onPress={initiate} />
     </SafeAreaView>
   )
-}
-
-interface AccountKeyStartProps {
-  onPrimaryPress: () => void
-}
-
-function goToAccountKeyGuide() {
-  navigate(Screens.AccountKeyEducation, { nextScreen: Screens.BackupIntroduction })
 }
 
 const styles = StyleSheet.create({
