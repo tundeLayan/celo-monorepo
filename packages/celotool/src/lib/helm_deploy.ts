@@ -187,9 +187,8 @@ export async function installCertManagerAndNginx(celoEnv: string, clusterConfig?
   const nginxChartVersion = '3.9.0'
   const nginxChartNamespace = 'default'
 
-  // Cert Manager is the newer version of lego
   const certManagerExists = await outputIncludes(
-    `helm list -n default`,
+    `helm list -n cert-manager`,
     `cert-manager-cluster-issuers`,
     `cert-manager-cluster-issuers exists, skipping install`
   )
@@ -277,13 +276,30 @@ export async function installCertManager() {
 
   console.info('Installing cert-manager CustomResourceDefinitions')
   await execCmdWithExitOnFailure(
-    `kubectl apply --validate=false -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml`
+    `kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.crds.yaml`
   )
-  console.info('Updating cert-manager-cluster-issuers dependencies')
-  await execCmdWithExitOnFailure(`helm dependency update ${clusterIssuersHelmChartPath}`)
+
+  console.info('Creating cert-manager namespace')
+  await execCmdWithExitOnFailure(
+    `kubectl create ns cert-manager`
+  )
+
+  console.info('Updating cert-manager repository')
+  await execCmdWithExitOnFailure(
+    `helm repo add jetstack https://charts.jetstack.io`
+  )
+  await execCmdWithExitOnFailure(
+    `helm repo update`
+  )
+
+  console.info('Installing cert-manager')
+  await execCmdWithExitOnFailure(
+    `helm install cert-manager jetstack/cert-manager --namespace cert-manager --version v1.1.0`
+  )
+
   console.info('Installing cert-manager-cluster-issuers')
   await execCmdWithExitOnFailure(
-    `helm install cert-manager-cluster-issuers ${clusterIssuersHelmChartPath} -n default`
+    `helm install cert-manager-cluster-issuers ${clusterIssuersHelmChartPath} -n cert-manager`
   )
 }
 
