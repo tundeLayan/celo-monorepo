@@ -52,11 +52,12 @@ const DefaultConfig = {
   downtimeSlasher: {
     reward: '10000000000000000000', // 10 cGLD
     penalty: '100000000000000000000', // 100 cGLD
-    slashableDowntime: 60, // Should be overridden on public testnets
+    // slashableDowntime: 60, // Should be overridden on public testnets
+    slashableDowntime: (8 * HOUR) / 5, // ~8 hours
   },
   election: {
     minElectableValidators: '1',
-    maxElectableValidators: '60',
+    maxElectableValidators: '100',
     maxVotesPerAccount: 10,
     electabilityThreshold: 1 / 1000,
     frozen: false,
@@ -208,7 +209,7 @@ const NetworkConfigs = {
     },
     election: {
       minElectableValidators: '3',
-      maxElectableValidators: '60',
+      maxElectableValidators: '100',
       frozen: false,
     },
     epochRewards: {
@@ -455,7 +456,7 @@ const NetworkConfigs = {
     },
     election: {
       minElectableValidators: '22',
-      maxElectableValidators: '60',
+      maxElectableValidators: '100',
       maxVotesPerAccount: 10,
       electabilityThreshold: 1 / 1000,
       frozen: true,
