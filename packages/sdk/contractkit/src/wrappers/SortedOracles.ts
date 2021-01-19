@@ -61,7 +61,7 @@ export type CurrencyPairIdentifier = Branded<Address, 'PairIdentifier'>
 export const pairIdentifier = (pair: string): CurrencyPairIdentifier => {
   return ensureLeading0x(
     keccak256(pair)
-      .slice(0, 20)
+      .slice(12, 32)
       .toString('hex')
   ) as CurrencyPairIdentifier
 }
