@@ -38,6 +38,7 @@ export default class ShowMultiSig extends BaseCommand {
       if (raw) return txdata
       return { ...txdata, data: await explorer.tryParseTxInput(txdata.destination, txdata.data) }
     }
+    console.log(await multisig._getImplementation())
     const txinfo =
       tx !== undefined
         ? await process(await multisig.getTransaction(tx))

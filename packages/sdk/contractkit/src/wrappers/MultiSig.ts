@@ -92,6 +92,11 @@ export class MultiSigWrapper extends BaseWrapper<MultiSig> {
     }
   }
 
+  async _getImplementation(): Promise<TransactionData[]> {
+    const imp = await this._getImplementation()
+    return imp
+  }
+
   async getTransactions(): Promise<TransactionData[]> {
     const txcount = await this.getTransactionCount()
     const res: TransactionData[] = []

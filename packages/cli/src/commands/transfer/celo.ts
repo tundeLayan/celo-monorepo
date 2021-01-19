@@ -15,6 +15,7 @@ export default class TransferCelo extends BaseCommand {
     to: Flags.address({ required: true, description: 'Address of the receiver' }),
     value: flags.string({ required: true, description: 'Amount to transfer (in wei)' }),
     comment: flags.string({ description: 'Transfer comment' }),
+    approve: flags.boolean({ description: 'approve instead of transfer' }),
   }
 
   static examples = [
@@ -35,7 +36,10 @@ export default class TransferCelo extends BaseCommand {
       .hasEnoughCelo(from, value)
       .runChecks()
 
-    if (res.flags.comment) {
+    if (res.flags.approve) {
+      console.log(await celoToken.allowance(from, to))
+      await displaySendTx('approve', celoToken.approve(to, value.toFixed()))
+    } else if (res.flags.comment) {
       await displaySendTx(
         'transferWithComment',
         celoToken.transferWithComment(to, value.toFixed(), res.flags.comment)
