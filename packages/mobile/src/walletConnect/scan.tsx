@@ -4,8 +4,9 @@ import colors from '@celo/react-components/styles/colors'
 import fontStyles from '@celo/react-components/styles/fonts'
 import { Spacing } from '@celo/react-components/styles/styles'
 import { EIP712TypedData } from '@celo/utils/src/sign-typed-data-utils'
-import WalletConnect from '@walletconnect/client'
-import { IConnector, IJsonRpcRequest, ISessionParams } from '@walletconnect/types'
+import AsyncStorage from '@react-native-community/async-storage'
+import WalletConnect, { CLIENT_EVENTS } from '@walletconnect/client'
+import { SessionTypes } from '@walletconnect/types'
 import BigNumber from 'bignumber.js'
 import React, { useState } from 'react'
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native'
@@ -15,6 +16,7 @@ import Dialog from 'src/components/Dialog'
 import DrawerTopBar from 'src/navigator/DrawerTopBar'
 import { getPassword } from 'src/pincode/authentication'
 import { getContractKitAsync, getWalletAsync } from 'src/web3/contracts'
+// import { AsyncStorage } from 'react-native';
 
 enum Actions {
   sendTransaction = 'eth_sendTransaction',
@@ -22,12 +24,13 @@ enum Actions {
   signTypedData = 'eth_signTypedData',
 }
 
-function parsePersonalSign(req: IJsonRpcRequest): { from: string; payload: string } {
-  const [payload, from] = req.params
+function parsePersonalSign(req: SessionTypes.Payload): { from: string; payload: string } {
+  // @ts-ignore
+  const [payload, from] = req.payload.params
   return { from, payload }
 }
-function parseSignTypedData(req: IJsonRpcRequest): { from: string; payload: EIP712TypedData } {
-  const [from, payload] = req.params
+function parseSignTypedData(req: any): { from: string; payload: EIP712TypedData } {
+  const [from, payload] = req.payload.params
   return { from, payload: JSON.parse(payload) }
 }
 
@@ -37,9 +40,10 @@ function hexToUtf8(hex: string) {
 
 function Scan(props: any) {
   const [uri, setUri] = useState('')
-  const [wc, setWc] = useState<IConnector | null>(null)
-  const [pendingRequest, setPendingRequest] = useState<IJsonRpcRequest | null>(null)
-  const [pendingSession, setPendingSession] = useState<ISessionParams | null>(null)
+  const [wc, setWc] = useState<WalletConnect | null>(null)
+  const [pendingRequest, setPendingRequest] = useState<SessionTypes.PayloadEvent | null>(null)
+  const [pendingSession, setPendingSession] = useState<SessionTypes.Proposal | null>(null)
+  const [proposer, setProposer] = useState<any>(null)
   // @ts-ignore
   const account = useSelector((state) => state.web3.account)
   const [requestMetadata, setRequestMetadata] = useState<{ to: string } | null>(null)
@@ -63,39 +67,75 @@ function Scan(props: any) {
     await wallet.unlockAccount(account, password, 100000)
     // }
 
-    const { id, method } = pendingRequest
+    const {
+      // @ts-ignore
+      payload: { id, method },
+    } = pendingRequest
 
     if (method === Actions.personalSign) {
       const { payload, from } = parsePersonalSign(pendingRequest)
+      console.log('Trying to sign', payload)
       const signature = await wallet.signPersonalMessage(from, payload)
-      wc?.approveRequest({
-        id,
-        result: signature,
+      console.log('signed', signature)
+
+      console.log('response', {
+        topic: pendingRequest.topic,
+        response: {
+          id: pendingRequest.payload.id,
+          jsonrpc: '2.0',
+          result: signature,
+        },
       })
+      wc?.respond({
+        // @ts-ignore
+        topic: pendingRequest.topic,
+        response: {
+          id: pendingRequest.payload.id,
+          jsonrpc: '2.0',
+          result: signature,
+        },
+      })
+      // wc?.approveRequest({
+      //   id,
+      //   result: signature,
+      // })
       setPendingRequest(null)
       return
     }
 
     if (method === Actions.signTypedData) {
       const { from, payload } = parseSignTypedData(pendingRequest)
+      console.log('trying to sign', payload)
       const signature = await wallet.signTypedData(from, payload)
-      wc?.approveRequest({
-        id,
-        result: signature,
+      wc?.respond({
+        // @ts-ignore
+        topic: pendingRequest.topic,
+        response: {
+          id: pendingRequest.payload.id,
+          jsonrpc: '2.0',
+          result: signature,
+        },
       })
+
       setPendingRequest(null)
       return
     }
 
     if (method === 'eth_sendTransaction') {
-      const [tx] = pendingRequest.params
+      // @ts-ignore
+      const [tx] = pendingRequest.payload.params
       const kit = await getContractKitAsync(false)
       const sent = await kit.sendTransaction(tx)
       const hash = await sent.getHash()
       console.log('hash', hash)
-      wc?.approveRequest({
-        id,
-        result: hash,
+      wc?.respond({
+        // @ts-ignore
+        topic: pendingRequest.topic,
+        response: {
+          id: pendingRequest.payload.id,
+          jsonrpc: '2.0',
+          result: hash,
+        },
       })
       setPendingRequest(null)
       return
@@ -107,29 +147,38 @@ function Scan(props: any) {
   function InitiateConnectionModal() {
     return (
       <Dialog
-        title={`Establish connection with ${pendingSession?.peerMeta?.name}?`}
+        title={`Establish connection with ${pendingSession?.proposer.metadata.name}?`}
         isVisible={!!pendingSession}
         actionText="Allow"
         secondaryActionText="Cancel"
         actionPress={() => {
-          wc?.approveSession({
-            accounts: [account],
-            chainId: 44787,
-          })
+          // wc?.session.
+          const response: SessionTypes.Response = {
+            metadata: {
+              name: 'Test Wallet',
+              description: 'Test Wallet',
+              url: 'https://google.com',
+              icons: ['https://walletconnect.org/walletconnect-logo.png'],
+            },
+            state: {
+              accounts: [`${account}@eip155:1`],
+            },
+          }
+          wc?.approve({ proposal: pendingSession!, response })
           setPendingSession(null)
         }}
         secondaryActionPress={() => {
-          wc?.rejectSession({ message: 'User cancelled' })
+          wc?.reject({ proposal: pendingSession! })
           setPendingSession(null)
         }}
       >
-        <Text>
+        {/* <Text>
           {pendingSession?.peerMeta?.name}{' '}
           {pendingSession?.peerMeta?.description
             ? `(${pendingSession?.peerMeta?.description}) `
             : ''}
           is attempting to establish a connection with your device.
-        </Text>
+        </Text> */}
         <Text>{'\n'}</Text>
         <Text>{'\n'}</Text>
         <Text>Don't be alarmed, every action will still have to be manually approved by you.</Text>
@@ -142,13 +191,16 @@ function Scan(props: any) {
       return null
     }
 
+    console.log('Confirming Action', pendingRequest)
+
     let body
-    if (pendingRequest.method === Actions.personalSign) {
+    // @ts-ignore
+    if (pendingRequest.payload.method === Actions.personalSign) {
       const { payload } = parsePersonalSign(pendingRequest)
       body = (
         <View>
           <View>
-            <Text>{wc?.peerMeta?.name} is requesting you sign the following payload:</Text>
+            {/* <Text>{wc?.peerMeta?.name} is requesting you sign the following payload:</Text> */}
           </View>
           <View style={{ backgroundColor: colors.goldFaint, padding: 12, marginVertical: 12 }}>
             <Text>{hexToUtf8(payload)}</Text>
@@ -157,12 +209,13 @@ function Scan(props: any) {
       )
     }
 
-    if (pendingRequest.method === Actions.signTypedData) {
+    // @ts-ignore
+    if (pendingRequest.payload.method === Actions.signTypedData) {
       const { payload } = parseSignTypedData(pendingRequest)
       body = (
         <View>
           <View>
-            <Text>{wc?.peerMeta?.name} is requesting you sign the following payload:</Text>
+            {/* <Text>{wc?.peerMeta?.name} is requesting you sign the following payload:</Text> */}
           </View>
 
           <View style={{ backgroundColor: colors.goldFaint, padding: 12, marginVertical: 12 }}>
@@ -173,13 +226,16 @@ function Scan(props: any) {
     }
 
     // note this is hard coded to handle CELO transfers right now
-    if (pendingRequest.method === Actions.sendTransaction) {
-      const [tx] = pendingRequest.params
+    // @ts-ignore
+    if (pendingRequest.payload.method === Actions.sendTransaction) {
+      console.log('>> sendTransaction', JSON.stringify(pendingRequest.payload))
+      // @ts-ignore
+      const [tx] = pendingRequest.payload.params
       const value = new BigNumber(tx.value).toNumber()
       body = (
         <View>
           <View>
-            <Text>{wc?.peerMeta?.name} is requesting transfer the following:</Text>
+            <Text>{proposer.metadata.name} is requesting transfer the following:</Text>
           </View>
 
           <Text style={{ paddingTop: 36 }}>Value (CELO): {value}</Text>
@@ -211,41 +267,102 @@ function Scan(props: any) {
 
   const initiate = async () => {
     // Create connector
-    const connector = new WalletConnect({
-      uri,
-      clientMeta: {
-        description: 'A mobile payments app that works worldwide',
-        url: 'https://valoraapp.com',
-        icons: ['https://walletconnect.org/walletconnect-logo.png'],
-        name: 'Valora',
+
+    console.log('WalletConnect initiating')
+    const client = await WalletConnect.init({
+      relayProvider: 'wss://staging.walletconnect.org',
+      storage: {
+        // @ts-ignore
+        getEntries: () => {
+          console.log('getEntries')
+        },
+        // @ts-ignore
+        getItem: async (key) => {
+          const item = await AsyncStorage.getItem(key)
+          console.log('getItem', key, item)
+
+          if (item) {
+            return JSON.parse(item)
+          }
+          return item
+        },
+        // @ts-ignore
+        getKeys: () => {
+          console.log('getKeys')
+        }, //  AsyncStorage.getAllKeys,
+        // @ts-ignore
+        setItem: (key, value) => {
+          console.log('setitem', key, value)
+          return AsyncStorage.setItem(key, JSON.stringify(value))
+        },
+        // @ts-ignore
+        removeItem: () => {}, // AsyncStorage.removeItem,
       },
     })
-    setWc(connector)
+    console.log('WalletConnect initiated', client)
 
-    connector.on('session_request', (error, payload) => {
-      console.log('session_request', error, JSON.stringify(payload, null, 2))
-      const [session] = payload.params
-      setPendingSession(session)
+    async function handleSessionUserApproval(approved: boolean, proposal: SessionTypes.Proposal) {
+      // if (userApproved) {
+      // if user approved then include response with accounts matching the chains and wallet metadata
+      setPendingSession(proposal)
+
+      // } else {
+      //   // if user didn't approve then reject with no response
+      //   await client.reject({ proposal })
+      // }
+    }
+
+    client.on(CLIENT_EVENTS.session.proposal, async (proposal: SessionTypes.Proposal) => {
+      console.log('WalletConnect proposal', proposal)
+      // user should be prompted to approve the proposed session permissions displaying also dapp metadata
+      const { proposer, permissions } = proposal
+      const { metadata } = proposer
+      let approved: boolean
+      setProposer(proposer)
+      handleSessionUserApproval(true, proposal) // described in the step 4
     })
 
-    connector.on('call_request', async (error, req) => {
-      // get request metadata if it exists
-      console.log(req)
-      if (req.params[0].to) {
+    client.on(CLIENT_EVENTS.session.created, async (session: SessionTypes.Created) => {
+      // session created succesfully
+    })
+
+    console.log('PAIRING', uri)
+    await client.pair({ uri })
+    console.log('PAIRED', uri)
+
+    // const connector = new WalletConnect({
+    //   uri,
+    //   clientMeta: {
+    //     description: 'A mobile payments app that works worldwide',
+    //     url: 'https://valoraapp.com',
+    //     icons: ['https://walletconnect.org/walletconnect-logo.png'],
+    //     name: 'Valora',
+    //   },
+    // })
+    setWc(client)
+
+    client.on(CLIENT_EVENTS.session.payload, async (payloadEvent: SessionTypes.PayloadEvent) => {
+      console.log('WalletConnect payload', payloadEvent)
+      setPendingRequest(payloadEvent)
+
+      // @ts-ignore
+      if (payloadEvent.payload.method === Actions.sendTransaction) {
+        // @ts-ignore
+        const to = payloadEvent.payload.params[0].to
         const wrapper = new OffchainDataWrapper(account, await getContractKitAsync(true))
         const name = new PublicNameAccessor(wrapper)
-        const offchainReadResult = await name.readAsResult(req.params[0].to)
+        const offchainReadResult = await name.readAsResult(to)
         if (offchainReadResult.ok) {
           setRequestMetadata({ to: offchainReadResult.result.name })
         }
       }
-
-      setPendingRequest(req)
     })
 
-    connector.on('disconnect', (error, payload) => {
-      console.log('disconnect', error, payload)
-    })
+    // connector.on('session_request', (error, payload) => {
+    //   console.log('session_request', error, JSON.stringify(payload, null, 2))
+    //   const [session] = payload.params
+    //   setPendingSession(session)
+    // })
   }
 
   return (
