@@ -4,6 +4,7 @@ import colors from '@celo/react-components/styles/colors'
 import fontStyles from '@celo/react-components/styles/fonts'
 import { Spacing } from '@celo/react-components/styles/styles'
 import { EIP712TypedData } from '@celo/utils/src/sign-typed-data-utils'
+// import { AsyncStorage } from 'react-native';
 import AsyncStorage from '@react-native-community/async-storage'
 import WalletConnect, { CLIENT_EVENTS } from '@walletconnect/client'
 import { SessionTypes } from '@walletconnect/types'
@@ -16,12 +17,12 @@ import Dialog from 'src/components/Dialog'
 import DrawerTopBar from 'src/navigator/DrawerTopBar'
 import { getPassword } from 'src/pincode/authentication'
 import { getContractKitAsync, getWalletAsync } from 'src/web3/contracts'
-// import { AsyncStorage } from 'react-native';
 
 enum Actions {
   sendTransaction = 'eth_sendTransaction',
   personalSign = 'personal_sign',
   signTypedData = 'eth_signTypedData',
+  celoWrite = 'celo_offchainWrite',
 }
 
 function parsePersonalSign(req: SessionTypes.Payload): { from: string; payload: string } {
@@ -141,6 +142,42 @@ function Scan(props: any) {
       return
     }
 
+    if (method === Actions.celoWrite) {
+      // @ts-ignore
+      const [path, data] = pendingRequest.payload.params
+      console.log('celoWrite', path, data)
+      await fetch(
+        'https://www.googleapis.com/upload/storage/v1/b/celo-test-alexh-bucket/o?uploadType=media&name=/account/name',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': 'JSON.stringify({ name: data }).length',
+            Authorization: `Beader ${'ddd'}`,
+          },
+          body: JSON.stringify({ name: data }),
+        }
+      )
+      //       curl -k -v -X POST \
+      // -H "Authorization: Bearer <your_oauth2_token>" -H "Content-Length: 8" \
+      // -H "Content-Type: text/plain" \
+      // 'https://www.googleapis.com/upload/storage/v1/b/your-bucket/o?uploadType=media&name=yourobjectname' \
+      // -d 'yourdata'
+      console.log('>>> did it!')
+      wc?.respond({
+        // @ts-ignore
+        topic: pendingRequest.topic,
+        response: {
+          id: pendingRequest.payload.id,
+          jsonrpc: '2.0',
+          result: 'Some useful URL',
+        },
+      })
+
+      setPendingRequest(null)
+      return
+    }
+
     throw new Error(`Unknown action ${method}`)
   }
 
@@ -172,13 +209,19 @@ function Scan(props: any) {
           setPendingSession(null)
         }}
       >
-        {/* <Text>
-          {pendingSession?.peerMeta?.name}{' '}
-          {pendingSession?.peerMeta?.description
-            ? `(${pendingSession?.peerMeta?.description}) `
-            : ''}
-          is attempting to establish a connection with your device.
-        </Text> */}
+        <Text>
+          {pendingSession?.proposer.metadata.name} is attempting to establish a connection with your
+          device.{' '}
+        </Text>
+
+        <Text>
+          During your session it could ask for access to do the following actions:
+          {'\n'}
+        </Text>
+        <Text>{'\n'}</Text>
+        {pendingSession?.permissions.jsonrpc.methods.map((rpc) => (
+          <Text>{`${rpc}\n`}</Text>
+        ))}
         <Text>{'\n'}</Text>
         <Text>{'\n'}</Text>
         <Text>Don't be alarmed, every action will still have to be manually approved by you.</Text>
@@ -191,7 +234,7 @@ function Scan(props: any) {
       return null
     }
 
-    console.log('Confirming Action', pendingRequest)
+    console.log('Confirming Action', pendingRequest.payload)
 
     let body
     // @ts-ignore
@@ -240,6 +283,28 @@ function Scan(props: any) {
 
           <Text style={{ paddingTop: 36 }}>Value (CELO): {value}</Text>
           <Text>To: {requestMetadata ? `${requestMetadata.to} (${tx.to})` : tx.to}</Text>
+        </View>
+      )
+    }
+
+    // @ts-ignore
+    console.log(pendingRequest.payload.method)
+    // @ts-ignore
+    if (pendingRequest.payload.method === Actions.celoWrite) {
+      console.log('>> celoWrite', JSON.stringify(pendingRequest.payload))
+      // @ts-ignore
+      const [path, data] = pendingRequest.payload.params
+      body = (
+        <View>
+          <View>
+            <Text>
+              {proposer.metadata.name} wants to write the following to your storage path {path}:
+            </Text>
+          </View>
+
+          <View style={{ backgroundColor: colors.goldFaint, padding: 12, marginVertical: 12 }}>
+            <Text>{JSON.stringify(data, null, 2)}</Text>
+          </View>
         </View>
       )
     }
@@ -301,25 +366,12 @@ function Scan(props: any) {
     })
     console.log('WalletConnect initiated', client)
 
-    async function handleSessionUserApproval(approved: boolean, proposal: SessionTypes.Proposal) {
-      // if (userApproved) {
-      // if user approved then include response with accounts matching the chains and wallet metadata
-      setPendingSession(proposal)
-
-      // } else {
-      //   // if user didn't approve then reject with no response
-      //   await client.reject({ proposal })
-      // }
-    }
-
     client.on(CLIENT_EVENTS.session.proposal, async (proposal: SessionTypes.Proposal) => {
-      console.log('WalletConnect proposal', proposal)
       // user should be prompted to approve the proposed session permissions displaying also dapp metadata
       const { proposer, permissions } = proposal
-      const { metadata } = proposer
-      let approved: boolean
+      console.log('WalletConnect proposal', proposal, permissions)
       setProposer(proposer)
-      handleSessionUserApproval(true, proposal) // described in the step 4
+      setPendingSession(proposal)
     })
 
     client.on(CLIENT_EVENTS.session.created, async (session: SessionTypes.Created) => {
