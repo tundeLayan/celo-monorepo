@@ -919,6 +919,15 @@ export async function startGeth(
   // TODO(ponti): add flag after Donut fork
   // const txFeeRecipient = instance.txFeeRecipient || minerValidator
   const verbosity = gethConfig.verbosity ? gethConfig.verbosity : '3'
+  let blocktime: number = 1
+
+  if (
+    gethConfig.genesisConfig &&
+    gethConfig.genesisConfig.blockTime !== undefined &&
+    gethConfig.genesisConfig.blockTime >= 0
+  ) {
+    blocktime = gethConfig.genesisConfig.blockTime
+  }
 
   const gethArgs = [
     '--datadir',
@@ -1076,9 +1085,8 @@ export async function startGeth(
 export function writeGenesis(gethConfig: GethRunConfig, validators: Validator[], verbose: boolean) {
   const genesis: string = generateGenesis({
     validators,
-    blockTime: 1,
     epoch: 10,
-    lookbackwindow: 3,
+    lookbackwindow: 2,
     requestTimeout: 3000,
     chainId: gethConfig.networkId,
     ...gethConfig.genesisConfig,
@@ -1231,9 +1239,6 @@ export async function migrateContracts(
         validatorKeys: validatorPrivateKeys.map(ensure0x),
         attestationKeys: attestationKeys.map(ensure0x),
       },
-      blockchainParameters: {
-        uptimeLookbackWindow: 3, // same as our default in `writeGenesis()`
-      },      
     },
     overrides
   )
