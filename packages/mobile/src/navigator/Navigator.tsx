@@ -6,7 +6,6 @@ import { Platform } from 'react-native'
 import SplashScreen from 'react-native-splash-screen'
 import AccountKeyEducation from 'src/account/AccountKeyEducation'
 import GoldEducation from 'src/account/GoldEducation'
-import InviteReview from 'src/account/InviteReview'
 import Licenses from 'src/account/Licenses'
 import Profile from 'src/account/Profile'
 import { PincodeType } from 'src/account/reducer'
@@ -17,13 +16,14 @@ import Debug from 'src/app/Debug'
 import ErrorScreen from 'src/app/ErrorScreen'
 import { currentLanguageSelector } from 'src/app/reducers'
 import UpgradeScreen from 'src/app/UpgradeScreen'
+import WebViewScreen, { webViewScreenNavOptions } from 'src/app/WebViewScreen'
 import BackupComplete from 'src/backup/BackupComplete'
+import BackupForceScreen from 'src/backup/BackupForceScreen'
 import BackupPhrase, { navOptionsForBackupPhrase } from 'src/backup/BackupPhrase'
 import BackupQuiz, { navOptionsForQuiz } from 'src/backup/BackupQuiz'
-import BackupSocial from 'src/backup/BackupSocial'
-import BackupSocialIntro from 'src/backup/BackupSocialIntro'
-import BackButton from 'src/components/BackButton.v2'
-import CancelButton from 'src/components/CancelButton.v2'
+import BackButton from 'src/components/BackButton'
+import CancelButton from 'src/components/CancelButton'
+import ConsumerIncentivesHomeScreen from 'src/consumerIncentives/ConsumerIncentivesHomeScreen'
 import DappKitAccountScreen from 'src/dappkit/DappKitAccountScreen'
 import DappKitSignTxScreen from 'src/dappkit/DappKitSignTxScreen'
 import DappKitTxDataScreen from 'src/dappkit/DappKitTxDataScreen'
@@ -34,19 +34,23 @@ import ExchangeTradeScreen from 'src/exchange/ExchangeTradeScreen'
 import WithdrawCeloQrScannerScreen from 'src/exchange/WithdrawCeloQrScannerScreen'
 import WithdrawCeloReviewScreen from 'src/exchange/WithdrawCeloReviewScreen'
 import WithdrawCeloScreen from 'src/exchange/WithdrawCeloScreen'
-import FiatExchangeAmount, {
-  fiatExchangesAmountScreenOptions,
-} from 'src/fiatExchanges/FiatExchangeAmount'
+import BidaliScreen from 'src/fiatExchanges/BidaliScreen'
+import ExternalExchanges, {
+  externalExchangesScreenOptions,
+} from 'src/fiatExchanges/ExternalExchanges'
 import FiatExchangeOptions, {
   fiatExchangesOptionsScreenOptions,
 } from 'src/fiatExchanges/FiatExchangeOptions'
+import LocalProviderCashOut, {
+  localProviderCashOutOptions,
+} from 'src/fiatExchanges/LocalProviderCashOut'
 import MoonPay, { moonPayOptions } from 'src/fiatExchanges/MoonPay'
+import ProviderOptionsScreen from 'src/fiatExchanges/ProviderOptionsScreen'
+import Spend, { spendScreenOptions } from 'src/fiatExchanges/Spend'
 import { CURRENCY_ENUM } from 'src/geth/consts'
 import i18n from 'src/i18n'
 import PhoneNumberLookupQuotaScreen from 'src/identity/PhoneNumberLookupQuotaScreen'
 import ImportWallet from 'src/import/ImportWallet'
-import ImportWalletSocial from 'src/import/ImportWalletSocial'
-import EnterInviteCode from 'src/invite/EnterInviteCode'
 import Language from 'src/language/Language'
 import SelectLocalCurrency from 'src/localCurrency/SelectLocalCurrency'
 import DrawerNavigator from 'src/navigator/DrawerNavigator'
@@ -59,15 +63,15 @@ import {
   noHeader,
   noHeaderGestureDisabled,
   nuxNavigationOptions,
-} from 'src/navigator/Headers.v2'
+} from 'src/navigator/Headers'
 import { navigateBack, navigateToExchangeHome } from 'src/navigator/NavigationService'
 import QRNavigator from 'src/navigator/QRNavigator'
 import { Screens } from 'src/navigator/Screens'
-import { TopBarTextButton } from 'src/navigator/TopBarButton.v2'
+import { TopBarTextButton } from 'src/navigator/TopBarButton'
 import { StackParamList } from 'src/navigator/types'
 import ImportContactsScreen from 'src/onboarding/contacts/ImportContactsScreen'
 import OnboardingEducationScreen from 'src/onboarding/education/OnboardingEducationScreen'
-import NameAndNumber from 'src/onboarding/registration/NameAndNumber'
+import NameAndPicture from 'src/onboarding/registration/NameAndPicture'
 import RegulatoryTerms from 'src/onboarding/registration/RegulatoryTerms'
 import SelectCountry from 'src/onboarding/registration/SelectCountry'
 import OnboardingSuccessScreen from 'src/onboarding/success/OnboardingSuccessScreen'
@@ -95,16 +99,19 @@ import ValidateRecipientIntro, {
 } from 'src/send/ValidateRecipientIntro'
 import SetClock from 'src/set-clock/SetClock'
 import TransactionReview from 'src/transactions/TransactionReview'
+import Logger from 'src/utils/Logger'
 import { getDatetimeDisplayString } from 'src/utils/time'
 import { ExtractProps } from 'src/utils/typescript'
 import VerificationEducationScreen from 'src/verify/VerificationEducationScreen'
 import VerificationInputScreen from 'src/verify/VerificationInputScreen'
 import VerificationLoadingScreen from 'src/verify/VerificationLoadingScreen'
 
+const TAG = 'Navigator'
+
 const Stack = createStackNavigator<StackParamList>()
 const RootStack = createStackNavigator<StackParamList>()
 
-type NavigationOptions = StackScreenProps<StackParamList>
+type NavigationOptions = StackScreenProps<StackParamList, keyof StackParamList>
 
 export const modalScreenOptions = ({ route, navigation }: NavigationOptions) =>
   Platform.select({
@@ -112,8 +119,7 @@ export const modalScreenOptions = ({ route, navigation }: NavigationOptions) =>
     ios: {
       gestureEnabled: true,
       cardOverlayEnabled: true,
-      headerStatusBarHeight:
-        navigation.dangerouslyGetState().routes.indexOf(route) > 0 ? 0 : undefined,
+      headerStatusBarHeight: 0,
       ...TransitionPresets.ModalPresentationIOS,
     },
   })
@@ -122,7 +128,11 @@ const commonScreens = (Navigator: typeof Stack) => {
   return (
     <>
       <Navigator.Screen name={Screens.ErrorScreen} component={ErrorScreen} options={noHeader} />
-      <Navigator.Screen name={Screens.UpgradeScreen} component={UpgradeScreen} />
+      <Navigator.Screen
+        name={Screens.UpgradeScreen}
+        component={UpgradeScreen}
+        options={UpgradeScreen.navigationOptions}
+      />
       <Navigator.Screen
         name={Screens.DappKitAccountAuth}
         component={DappKitAccountScreen}
@@ -143,6 +153,11 @@ const commonScreens = (Navigator: typeof Stack) => {
         name={Screens.PhoneNumberLookupQuota}
         component={PhoneNumberLookupQuotaScreen}
         options={noHeaderGestureDisabled}
+      />
+      <Navigator.Screen
+        name={Screens.WebViewScreen}
+        component={WebViewScreen}
+        options={webViewScreenNavOptions}
       />
     </>
   )
@@ -200,8 +215,8 @@ const nuxScreens = (Navigator: typeof Stack) => (
       options={Welcome.navigationOptions}
     />
     <Navigator.Screen
-      name={Screens.NameAndNumber}
-      component={NameAndNumber}
+      name={Screens.NameAndPicture}
+      component={NameAndPicture}
       options={{
         ...nuxNavigationOptions,
         headerTitle: () => (
@@ -218,19 +233,9 @@ const nuxScreens = (Navigator: typeof Stack) => (
       options={pincodeSetScreenOptions}
     />
     <Navigator.Screen
-      name={Screens.EnterInviteCode}
-      component={EnterInviteCode}
-      options={EnterInviteCode.navigationOptions}
-    />
-    <Navigator.Screen
       name={Screens.ImportWallet}
       component={ImportWallet}
       options={ImportWallet.navigationOptions}
-    />
-    <Navigator.Screen
-      name={Screens.ImportWalletSocial}
-      component={ImportWalletSocial}
-      options={nuxNavigationOptions}
     />
     <Navigator.Screen
       name={Screens.ImportContacts}
@@ -379,8 +384,23 @@ const exchangeScreens = (Navigator: typeof Stack) => (
   </>
 )
 
+const consumerIncentivesScreens = (Navigator: typeof Stack) => (
+  <>
+    <Navigator.Screen
+      name={Screens.ConsumerIncentivesHomeScreen}
+      component={ConsumerIncentivesHomeScreen}
+      options={ConsumerIncentivesHomeScreen.navOptions}
+    />
+  </>
+)
+
 const backupScreens = (Navigator: typeof Stack) => (
   <>
+    <Navigator.Screen
+      name={Screens.BackupForceScreen}
+      component={BackupForceScreen}
+      options={BackupForceScreen.navOptions}
+    />
     <Navigator.Screen
       name={Screens.BackupPhrase}
       component={BackupPhrase}
@@ -391,15 +411,17 @@ const backupScreens = (Navigator: typeof Stack) => (
       component={BackupQuiz}
       options={navOptionsForQuiz}
     />
-    <Navigator.Screen name={Screens.BackupSocialIntro} component={BackupSocialIntro} />
-    <Navigator.Screen name={Screens.BackupSocial} component={BackupSocial} />
     <Navigator.Screen name={Screens.BackupComplete} component={BackupComplete} options={noHeader} />
   </>
 )
 
 const settingsScreens = (Navigator: typeof Stack) => (
   <>
-    <Navigator.Screen options={headerWithBackButton} name={Screens.Profile} component={Profile} />
+    <Navigator.Screen
+      options={Profile.navigationOptions}
+      name={Screens.Profile}
+      component={Profile}
+    />
     <Navigator.Screen
       name={Screens.Language}
       component={Language}
@@ -409,11 +431,6 @@ const settingsScreens = (Navigator: typeof Stack) => (
       name={Screens.SelectLocalCurrency}
       component={SelectLocalCurrency}
       options={headerWithBackButton}
-    />
-    <Navigator.Screen
-      options={headerWithBackButton}
-      name={Screens.InviteReview}
-      component={InviteReview}
     />
     <Navigator.Screen
       options={Licenses.navigationOptions}
@@ -426,16 +443,32 @@ const settingsScreens = (Navigator: typeof Stack) => (
       component={SupportContact}
     />
     <Navigator.Screen
-      options={fiatExchangesAmountScreenOptions}
-      name={Screens.FiatExchangeAmount}
-      component={FiatExchangeAmount}
+      options={externalExchangesScreenOptions}
+      name={Screens.ExternalExchanges}
+      component={ExternalExchanges}
     />
+    <Navigator.Screen options={spendScreenOptions} name={Screens.Spend} component={Spend} />
     <Navigator.Screen
       options={fiatExchangesOptionsScreenOptions}
       name={Screens.FiatExchangeOptions}
       component={FiatExchangeOptions}
     />
+    <Navigator.Screen
+      options={localProviderCashOutOptions}
+      name={Screens.LocalProviderCashOut}
+      component={LocalProviderCashOut}
+    />
     <Navigator.Screen options={moonPayOptions} name={Screens.MoonPay} component={MoonPay} />
+    <Navigator.Screen
+      options={ProviderOptionsScreen.navigationOptions}
+      name={Screens.ProviderOptionsScreen}
+      component={ProviderOptionsScreen}
+    />
+    <Navigator.Screen
+      options={BidaliScreen.navigationOptions}
+      name={Screens.BidaliScreen}
+      component={BidaliScreen}
+    />
   </>
 )
 
@@ -470,7 +503,7 @@ const mapStateToProps = (state: RootState) => {
   return {
     choseToRestoreAccount: state.account.choseToRestoreAccount,
     language: currentLanguageSelector(state),
-    e164Number: state.account.e164PhoneNumber,
+    name: state.account.name,
     acceptedTerms: state.account.acceptedTerms,
     pincodeType: state.account.pincodeType,
     redeemComplete: state.invite.redeemComplete,
@@ -489,11 +522,10 @@ export function MainStackScreen() {
     const {
       choseToRestoreAccount,
       language,
-      e164Number,
+      name,
       acceptedTerms,
       pincodeType,
       redeemComplete,
-      account,
       hasSeenVerificationNux,
     } = mapStateToProps(store.getState())
 
@@ -501,11 +533,13 @@ export function MainStackScreen() {
 
     if (!language) {
       initialRoute = Screens.Language
-    } else if (!e164Number || !acceptedTerms || pincodeType === PincodeType.Unset) {
+    } else if (!name || !acceptedTerms || pincodeType === PincodeType.Unset) {
       // User didn't go far enough in onboarding, start again from education
       initialRoute = Screens.OnboardingEducationScreen
-    } else if (!redeemComplete && !account) {
-      initialRoute = choseToRestoreAccount ? Screens.ImportWallet : Screens.EnterInviteCode
+    } else if (!redeemComplete) {
+      initialRoute = choseToRestoreAccount
+        ? Screens.ImportWallet
+        : Screens.OnboardingEducationScreen
     } else if (!hasSeenVerificationNux) {
       initialRoute = Screens.VerificationEducationScreen
     } else {
@@ -513,6 +547,7 @@ export function MainStackScreen() {
     }
 
     setInitialRoute(initialRoute)
+    Logger.info(`${TAG}@MainStackScreen`, `Initial route: ${initialRoute}`)
 
     // Wait for next frame to avoid slight gap when hiding the splash
     requestAnimationFrame(() => SplashScreen.hide())
@@ -531,6 +566,7 @@ export function MainStackScreen() {
       {verificationScreens(Stack)}
       {exchangeScreens(Stack)}
       {backupScreens(Stack)}
+      {consumerIncentivesScreens(Stack)}
       {settingsScreens(Stack)}
       {generalScreens(Stack)}
     </Stack.Navigator>
@@ -574,6 +610,11 @@ const modalAnimatedScreens = (Navigator: typeof Stack) => (
       name={Screens.SelectCountry}
       component={SelectCountry}
       options={SelectCountry.navigationOptions}
+    />
+    <Navigator.Screen
+      name={Screens.SendConfirmationModal}
+      component={SendConfirmation}
+      options={sendConfirmationScreenNavOptions}
     />
   </>
 )

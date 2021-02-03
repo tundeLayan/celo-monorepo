@@ -1,7 +1,9 @@
 import { stringToBoolean } from '@celo/utils/src/parsing'
 import BigNumber from 'bignumber.js'
 import Config from 'react-native-config'
-import { GethSyncMode } from 'src/geth/consts'
+import { ExternalExchangeProvider } from 'src/fiatExchanges/ExternalExchanges'
+import { SpendMerchant } from 'src/fiatExchanges/Spend'
+import { CURRENCY_ENUM, GethSyncMode } from 'src/geth/consts'
 // tslint:disable-next-line
 import * as secretsFile from '../secrets.json'
 
@@ -17,13 +19,8 @@ const keyOrUndefined = (file: any, secretsKey: any, attribute: any) => {
   return undefined
 }
 
-export const AVAILABLE_LANGUAGES = [
-  { name: 'English', code: 'en-US' },
-  { name: 'Español (América Latina)', code: 'es-419' },
-]
-
 // DEV only related settings
-export const isE2EEnv = Config.IS_E2E || false
+export const isE2EEnv = stringToBoolean(Config.IS_E2E || 'false')
 export const DEV_RESTORE_NAV_STATE_ON_RELOAD = stringToBoolean(
   Config.DEV_RESTORE_NAV_STATE_ON_RELOAD || 'false'
 )
@@ -47,10 +44,9 @@ export const DOLLAR_CASH_OUT_MIN_AMOUNT = 0.01
 export const DOLLAR_TRANSACTION_MIN_AMOUNT = 0.01
 export const GOLD_TRANSACTION_MIN_AMOUNT = 0.001
 // The number of seconds before the sender can reclaim the payment.
-export const ESCROW_PAYMENT_EXPIRY_SECONDS = 86400 // 1 days
-// We need to fallback to `integration` for testing under jest where react-native-config is undefined.
-export const DEFAULT_TESTNET = Config.DEFAULT_TESTNET || 'integration'
-export const DAILY_PAYMENT_LIMIT_CUSD = 500
+export const ESCROW_PAYMENT_EXPIRY_SECONDS = 3600 // 1 hour
+export const DEFAULT_TESTNET = Config.DEFAULT_TESTNET
+export const DEFAULT_DAILY_PAYMENT_LIMIT_CUSD = 500
 export const SMS_RETRIEVER_APP_SIGNATURE = Config.SMS_RETRIEVER_APP_SIGNATURE
 // ODIS minimum dollar balance for pepper quota retrieval
 // TODO change this to new ODIS minimum dollar balance once deployed
@@ -61,10 +57,16 @@ export const ODIS_MINIMUM_DOLLAR_BALANCE = 0.1
 // we would refetch verification state before going to VerificationInputScreen
 export const VERIFICATION_STATE_EXPIRY_SECONDS = 30
 
-// TODO: remove special case for mainnet
-export const DEFAULT_FORNO_URL = `https://${
-  DEFAULT_TESTNET === 'mainnet' ? 'rc1' : DEFAULT_TESTNET
-}-forno.celo-testnet.org`
+export const ATTESTATION_REVEAL_TIMEOUT_SECONDS = 60 // 1 minute
+
+// We can safely assume that any balance query returning a number
+// higher than this is incorrect (currently set to 10M)
+export const WALLET_BALANCE_UPPER_BOUND = new BigNumber('1e10')
+
+export const DEFAULT_FORNO_URL =
+  DEFAULT_TESTNET === 'mainnet'
+    ? 'https://forno.celo.org/'
+    : 'https://alfajores-forno.celo-testnet.org/'
 
 // FEATURE FLAGS
 export const FIREBASE_ENABLED = stringToBoolean(Config.FIREBASE_ENABLED || 'true')
@@ -94,7 +96,83 @@ export const MOONPAY_PUBLIC_KEY = keyOrUndefined(
   Config.SECRETS_KEY,
   'MOONPAY_PUBLIC_KEY'
 )
+export const RECAPTCHA_SITE_KEY_ALFAJORES = keyOrUndefined(
+  secretsFile,
+  Config.SECRETS_KEY,
+  'RECAPTCHA_SITE_KEY_ALFAJORES'
+)
+export const RECAPTCHA_SITE_KEY_MAINNET = keyOrUndefined(
+  secretsFile,
+  Config.SECRETS_KEY,
+  'RECAPTCHA_SITE_KEY_MAINNET'
+)
+export const SAFETYNET_KEY = keyOrUndefined(secretsFile, Config.SECRETS_KEY, 'SAFETYNET_KEY')
 export const MOONPAY_RATE_API = `https://api.moonpay.io/v3/currencies/celo/price?apiKey=${MOONPAY_PUBLIC_KEY}`
+export const BIDALI_URL_ALFAJORES = keyOrUndefined(
+  secretsFile,
+  Config.SECRETS_KEY,
+  'BIDALI_URL_ALFAJORES'
+)
+export const BIDALI_URL_MAINNET = keyOrUndefined(
+  secretsFile,
+  Config.SECRETS_KEY,
+  'BIDALI_URL_MAINNET'
+)
+
+export const EXCHANGE_PROVIDER_LINKS: ExternalExchangeProvider[] = [
+  {
+    name: 'Binance',
+    link: 'https://www.binance.com/en/trade/CELO_USDT',
+    currencies: [CURRENCY_ENUM.GOLD],
+  },
+  {
+    name: 'Bittrex',
+    link: 'https://bittrex.com/Market/Index?MarketName=USD-CELO',
+    currencies: [CURRENCY_ENUM.GOLD, CURRENCY_ENUM.DOLLAR],
+  },
+  {
+    name: 'Coinbase (CELO as CGLD)',
+    link: 'https://www.coinbase.com',
+    currencies: [CURRENCY_ENUM.GOLD],
+  },
+  {
+    name: 'Coinbase Pro (CELO as CGLD)',
+    link: 'https://pro.coinbase.com/trade/CGLD-USD',
+    currencies: [CURRENCY_ENUM.GOLD],
+  },
+  {
+    name: 'CoinList Pro',
+    link: 'https://coinlist.co/asset/celo',
+    currencies: [CURRENCY_ENUM.GOLD, CURRENCY_ENUM.DOLLAR],
+  },
+  {
+    name: 'OKCoin',
+    link: 'https://www.okcoin.com/en/spot/trade/cusd-usd/',
+    currencies: [CURRENCY_ENUM.GOLD, CURRENCY_ENUM.DOLLAR],
+  },
+  {
+    name: 'OKEx',
+    link: 'https://www.okex.com/spot/trade/CELO-USDT',
+    currencies: [CURRENCY_ENUM.GOLD],
+  },
+]
+
+export const SPEND_MERCHANT_LINKS: SpendMerchant[] = [
+  {
+    name: 'Beam and Go',
+    link: 'https://valora.beamandgo.com/',
+  },
+  {
+    name: 'Merchant Map',
+    link: 'https://celo.org/experience/merchant/merchants-accepting-celo#map',
+    subtitleKey: 'findMerchants',
+  },
+]
+
+export const SIMPLEX_URI = 'https://valoraapp.com/simplex'
+export const PONTO_URI = 'https://withponto.com/partners/celo/valora'
+export const KOTANI_URI = 'https://kotanipay.com/partners/valora'
 
 export const APP_STORE_ID = Config.APP_STORE_ID
 export const DYNAMIC_LINK_DOMAIN = Config.DYNAMIC_LINK_DOMAIN
+export const DYNAMIC_DOWNLOAD_LINK = Config.DYNAMIC_DOWNLOAD_LINK

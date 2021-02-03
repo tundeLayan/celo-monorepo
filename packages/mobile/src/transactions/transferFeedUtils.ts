@@ -6,9 +6,10 @@ import {
   TransferItemFragment,
   UserTransactionsQuery,
 } from 'src/apollo/types'
+import { formatShortenedAddress } from 'src/components/ShortenedAddress'
 import { DEFAULT_TESTNET } from 'src/config'
 import { decryptComment } from 'src/identity/commentEncryption'
-import { AddressToE164NumberType } from 'src/identity/reducer'
+import { AddressToDisplayNameType, AddressToE164NumberType } from 'src/identity/reducer'
 import { InviteDetails } from 'src/invite/actions'
 import { NumberToRecipient } from 'src/recipients/recipient'
 import { KnownFeedTransactionsType } from 'src/transactions/reducer'
@@ -75,6 +76,7 @@ export function getTransferFeedParams(
   recentTxRecipientsCache: NumberToRecipient,
   address: string,
   addressToE164Number: AddressToE164NumberType,
+  addressToDisplayName: AddressToDisplayNameType,
   rawComment: string | null,
   commentKey: string | null,
   timestamp: number,
@@ -89,7 +91,13 @@ export function getTransferFeedParams(
     timestamp,
     invitees
   )
-  const nameOrNumber = recipient ? recipient.displayName : e164PhoneNumber
+  const nameOrNumber =
+    recipient?.displayName || addressToDisplayName[address]?.name || e164PhoneNumber
+  const displayName =
+    nameOrNumber ||
+    t('feedItemAddress', {
+      address: formatShortenedAddress(address),
+    })
   const comment = getDecryptedTransferFeedComment(rawComment, commentKey, type)
 
   let title, info
@@ -132,18 +140,12 @@ export function getTransferFeedParams(
       break
     }
     case TokenTransactionType.Sent: {
-      title = t('feedItemSentTitle', {
-        context: !nameOrNumber ? 'noReceiverDetails' : null,
-        nameOrNumber,
-      })
+      title = t('feedItemSentTitle', { displayName })
       info = t('feedItemSentInfo', { context: !comment ? 'noComment' : null, comment })
       break
     }
     case TokenTransactionType.Received: {
-      title = t('feedItemReceivedTitle', {
-        context: !nameOrNumber ? 'noSenderDetails' : null,
-        nameOrNumber,
-      })
+      title = t('feedItemReceivedTitle', { displayName })
       info = t('feedItemReceivedInfo', { context: !comment ? 'noComment' : null, comment })
       break
     }

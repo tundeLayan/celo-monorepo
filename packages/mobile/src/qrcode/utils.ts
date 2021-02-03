@@ -3,11 +3,12 @@ import Share from 'react-native-share'
 import { call, put } from 'redux-saga/effects'
 import { showError, showMessage } from 'src/alert/actions'
 import { SendEvents } from 'src/analytics/Events'
+import { SendOrigin } from 'src/analytics/types'
 import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
 import { ErrorMessages } from 'src/app/ErrorMessages'
 import { validateRecipientAddressSuccess } from 'src/identity/actions'
 import { AddressToE164NumberType, E164NumberToAddressType } from 'src/identity/reducer'
-import { replace } from 'src/navigator/NavigationService'
+import { navigate } from 'src/navigator/NavigationService'
 import { Screens } from 'src/navigator/Screens'
 import { UriData, uriDataFromUrl } from 'src/qrcode/schema'
 import { getRecipientFromAddress, NumberToRecipient } from 'src/recipients/recipient'
@@ -121,14 +122,15 @@ export function* handleBarcode(
     }
 
     if (isOutgoingPaymentRequest) {
-      replace(Screens.PaymentRequestConfirmation, {
+      navigate(Screens.PaymentRequestConfirmation, {
         transactionData: secureSendTxData,
         addressJustValidated: true,
       })
     } else {
-      replace(Screens.SendConfirmation, {
+      navigate(Screens.SendConfirmation, {
         transactionData: secureSendTxData,
         addressJustValidated: true,
+        origin: SendOrigin.AppSendFlow,
       })
     }
 
@@ -141,5 +143,5 @@ export function* handleBarcode(
     recipientCache
   )
 
-  yield call(handleSendPaymentData, qrData, cachedRecipient, isOutgoingPaymentRequest)
+  yield call(handleSendPaymentData, qrData, cachedRecipient, isOutgoingPaymentRequest, true)
 }

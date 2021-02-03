@@ -2,7 +2,7 @@ import colors from '@celo/react-components/styles/colors'
 import fontStyles from '@celo/react-components/styles/fonts'
 import BigNumber from 'bignumber.js'
 import * as React from 'react'
-import { StyleProp, StyleSheet, Text, TextStyle, View } from 'react-native'
+import { ColorValue, StyleProp, StyleSheet, Text, TextStyle, View } from 'react-native'
 import { MoneyAmount } from 'src/apollo/types'
 import { useExchangeRate as useGoldToDollarRate } from 'src/exchange/hooks'
 import { CURRENCIES, CURRENCY_ENUM } from 'src/geth/consts'
@@ -13,6 +13,7 @@ import {
   useExchangeRate as useDollarToLocalRate,
   useLocalCurrencyCode,
 } from 'src/localCurrency/hooks'
+import { CurrencyInfo } from 'src/send/SendConfirmation'
 import { goldToDollarAmount } from 'src/utils/currencyExchange'
 import {
   getCentAwareMoneyDisplay,
@@ -49,6 +50,8 @@ interface Props {
   formatType: FormatType
   hideFullCurrencyName: boolean
   style?: StyleProp<TextStyle>
+  currencyInfo?: CurrencyInfo
+  testID?: string
 }
 
 const BIG_SIGN_RATIO = 34 / 48
@@ -56,9 +59,10 @@ const BIG_SYMBOL_RATIO = 24 / 48
 const BIG_CODE_RATIO = 16 / 48
 const BIG_LINE_HEIGHT_RATIO = 64 / 48
 
-function getBigSymbolStyle(fontSize: number, color: string | undefined) {
+function getBigSymbolStyle(fontSize: number, color: ColorValue | undefined): StyleProp<TextStyle> {
   const size = Math.floor(fontSize * BIG_SYMBOL_RATIO)
   return {
+    paddingVertical: 4,
     fontSize: size,
     color,
   }
@@ -118,6 +122,17 @@ function getFormatFunction(formatType: FormatType): FormatFunction {
   }
 }
 
+function getFullCurrencyName(currency: CURRENCY_ENUM | null) {
+  switch (currency) {
+    case CURRENCY_ENUM.DOLLAR:
+      return i18n.t('global:celoDollars')
+    case CURRENCY_ENUM.GOLD:
+      return i18n.t('global:celoGold')
+    default:
+      return null
+  }
+}
+
 export default function CurrencyDisplay({
   type,
   size,
@@ -131,9 +146,15 @@ export default function CurrencyDisplay({
   formatType,
   hideFullCurrencyName,
   style,
+  currencyInfo,
+  testID,
 }: Props) {
-  const localCurrencyCode = useLocalCurrencyCode()
-  const dollarToLocalRate = useDollarToLocalRate()
+  let localCurrencyCode = useLocalCurrencyCode()
+  let dollarToLocalRate = useDollarToLocalRate()
+  if (currencyInfo) {
+    localCurrencyCode = currencyInfo.localCurrencyCode
+    dollarToLocalRate = currencyInfo.localExchangeRate
+  }
   const goldToDollarRate = useGoldToDollarRate()
 
   const currency =
@@ -162,12 +183,13 @@ export default function CurrencyDisplay({
   const formattedValue =
     value && displayCurrency ? formatAmount(value.absoluteValue(), displayCurrency) : '-'
   const code = displayAmount?.currencyCode
+  const fullCurrencyName = getFullCurrencyName(displayCurrency)
 
   const color = useColors
     ? currency === CURRENCY_ENUM.GOLD
       ? colors.goldBrand
       : colors.greenBrand
-    : StyleSheet.flatten(style)?.color
+    : StyleSheet.flatten(style)?.color ?? colors.dark
 
   if (type === DisplayType.Big) {
     // In this type the symbol is displayed as superscript
@@ -175,14 +197,21 @@ export default function CurrencyDisplay({
     // and have to involve a View, which prevents this type to be embedded into a Text node
     // see https://medium.com/@aaronmgdr/a-better-superscript-in-react-native-591b83db6caa
     const fontSize = size
-    const signStyle = { fontSize: Math.round(fontSize * BIG_SIGN_RATIO), color }
-    const symbolStyle = getBigSymbolStyle(fontSize, color)
+    const signStyle: StyleProp<TextStyle> = {
+      fontSize: Math.round(fontSize * BIG_SIGN_RATIO),
+      color,
+    }
+    const symbolStyle: StyleProp<TextStyle> = getBigSymbolStyle(fontSize, color)
     const lineHeight = Math.round(fontSize * BIG_LINE_HEIGHT_RATIO)
-    const amountStyle = { fontSize, lineHeight, color }
-    const codeStyle = { fontSize: Math.round(fontSize * BIG_CODE_RATIO), lineHeight, color }
+    const amountStyle: StyleProp<TextStyle> = { fontSize, lineHeight, color }
+    const codeStyle: StyleProp<TextStyle> = {
+      fontSize: Math.round(fontSize * BIG_CODE_RATIO),
+      lineHeight,
+      color,
+    }
 
     return (
-      <View style={[styles.bigContainer, style]}>
+      <View style={[styles.bigContainer, style]} testID={testID}>
         {!hideSign && (
           <Text numberOfLines={1} style={[fontStyles.regular, signStyle]}>
             {sign}
@@ -206,14 +235,12 @@ export default function CurrencyDisplay({
   }
 
   return (
-    <Text numberOfLines={1} style={[style, { color }]}>
+    <Text numberOfLines={1} style={[style, { color }]} testID={testID}>
       {!hideSign && sign}
       {!hideSymbol && currencySymbol}
       {formattedValue}
       {!hideCode && !!code && ` ${code}`}
-      {!hideFullCurrencyName &&
-        code === CURRENCIES[CURRENCY_ENUM.DOLLAR].code &&
-        ` ${i18n.t('global:celoDollars')}`}
+      {!hideFullCurrencyName && !!fullCurrencyName && ` ${fullCurrencyName}`}
     </Text>
   )
 }
@@ -234,7 +261,7 @@ const styles = StyleSheet.create({
   bigContainer: {
     flexDirection: 'row',
     alignSelf: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginTop: 5,
   },
   bigCurrency: {

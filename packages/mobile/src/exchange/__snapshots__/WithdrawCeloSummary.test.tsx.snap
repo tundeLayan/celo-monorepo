@@ -68,7 +68,7 @@ exports[`WithdrawCeloSummary renders correctly 1`] = `
           Array [
             undefined,
             Object {
-              "color": undefined,
+              "color": "#2E3338",
             },
           ]
         }
@@ -86,6 +86,7 @@ exports[`WithdrawCeloSummary renders correctly 1`] = `
       nativeBackgroundAndroid={
         Object {
           "attribute": "selectableItemBackground",
+          "rippleRadius": undefined,
           "type": "ThemeAttrAndroid",
         }
       }
@@ -108,10 +109,13 @@ exports[`WithdrawCeloSummary renders correctly 1`] = `
       >
         <View
           style={
-            Object {
-              "alignItems": "center",
-              "flexDirection": "row",
-            }
+            Array [
+              Object {
+                "alignItems": "center",
+                "flexDirection": "row",
+              },
+              undefined,
+            ]
           }
         >
           <Text
@@ -187,24 +191,35 @@ exports[`WithdrawCeloSummary renders correctly 1`] = `
               
             </Text>
           </View>
-          <View
+          <Text
             style={
-              Object {
-                "transform": Array [
-                  Object {
-                    "scale": 0.7,
-                  },
-                ],
-              }
+              Array [
+                Object {
+                  "color": "#2E3338",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 16,
+                  "lineHeight": 22,
+                },
+                undefined,
+              ]
             }
           >
-            <ActivityIndicator
-              animating={true}
-              color="#42D689"
-              hidesWhenStopped={true}
-              size="small"
-            />
-          </View>
+            <Text
+              numberOfLines={1}
+              style={
+                Array [
+                  undefined,
+                  Object {
+                    "color": "#2E3338",
+                  },
+                ]
+              }
+            >
+              
+              
+              1
+            </Text>
+          </Text>
         </View>
       </View>
     </View>
@@ -275,7 +290,7 @@ exports[`WithdrawCeloSummary renders correctly 1`] = `
           Array [
             undefined,
             Object {
-              "color": undefined,
+              "color": "#2E3338",
             },
           ]
         }
@@ -335,7 +350,7 @@ exports[`WithdrawCeloSummary renders correctly 1`] = `
             Array [
               undefined,
               Object {
-                "color": undefined,
+                "color": "#2E3338",
               },
             ]
           }
@@ -370,7 +385,7 @@ exports[`WithdrawCeloSummary renders correctly 1`] = `
           Array [
             undefined,
             Object {
-              "color": undefined,
+              "color": "#2E3338",
             },
           ]
         }

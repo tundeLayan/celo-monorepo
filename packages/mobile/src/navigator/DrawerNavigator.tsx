@@ -1,7 +1,6 @@
-import ContactCircle from '@celo/react-components/components/ContactCircle'
 import PhoneNumberWithFlag from '@celo/react-components/components/PhoneNumberWithFlag'
 import colors from '@celo/react-components/styles/colors'
-import fontStyles from '@celo/react-components/styles/fonts.v2'
+import fontStyles from '@celo/react-components/styles/fonts'
 import { CURRENCIES, CURRENCY_ENUM } from '@celo/utils/src'
 import {
   createDrawerNavigator,
@@ -17,42 +16,49 @@ import {
   CommonActions,
   DrawerActions,
   DrawerNavigationState,
+  ParamListBase,
   useLinkBuilder,
 } from '@react-navigation/native'
 import { TransitionPresets } from '@react-navigation/stack'
-import * as React from 'react'
+import BigNumber from 'bignumber.js'
+import React, { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { StyleSheet, Text, View } from 'react-native'
 import deviceInfoModule from 'react-native-device-info'
+import { useDispatch } from 'react-redux'
 import FiatExchange from 'src/account/FiatExchange'
 import GoldEducation from 'src/account/GoldEducation'
-import {
-  defaultCountryCodeSelector,
-  e164NumberSelector,
-  nameSelector,
-  userContactDetailsSelector,
-} from 'src/account/selectors'
+import { defaultCountryCodeSelector, e164NumberSelector, nameSelector } from 'src/account/selectors'
 import SettingsScreen from 'src/account/Settings'
 import Support from 'src/account/Support'
 import { HomeEvents } from 'src/analytics/Events'
 import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
+import { toggleInviteModal } from 'src/app/actions'
 import BackupIntroduction from 'src/backup/BackupIntroduction'
 import AccountNumber from 'src/components/AccountNumber'
+import ContactCircleSelf from 'src/components/ContactCircleSelf'
 import CurrencyDisplay from 'src/components/CurrencyDisplay'
+import { GOLD_TRANSACTION_MIN_AMOUNT } from 'src/config'
+import { fetchExchangeRate } from 'src/exchange/actions'
 import ExchangeHomeScreen from 'src/exchange/ExchangeHomeScreen'
+import { features } from 'src/flags'
+import { celoTokenBalanceSelector } from 'src/goldToken/selectors'
 import WalletHome from 'src/home/WalletHome'
-import { Namespaces } from 'src/i18n'
+import i18n, { Namespaces } from 'src/i18n'
 import { AccountKey } from 'src/icons/navigator/AccountKey'
 import { AddWithdraw } from 'src/icons/navigator/AddWithdraw'
 import { Gold } from 'src/icons/navigator/Gold'
 import { Help } from 'src/icons/navigator/Help'
 import { Home } from 'src/icons/navigator/Home'
+import { Invite } from 'src/icons/navigator/Invite'
 import { Settings } from 'src/icons/navigator/Settings'
+import InviteFriendModal from 'src/invite/InviteFriendModal'
 import DrawerItem from 'src/navigator/DrawerItem'
 import { ensurePincode } from 'src/navigator/NavigationService'
 import { getActiveRouteName } from 'src/navigator/NavigatorWrapper'
+import RewardsPill from 'src/navigator/RewardsPill'
 import { Screens } from 'src/navigator/Screens'
-import useSelector from 'src/redux/useSelector'
+import { default as useSelector } from 'src/redux/useSelector'
 import { stableTokenBalanceSelector } from 'src/stableToken/reducer'
 import Logger from 'src/utils/Logger'
 import { currentAccountSelector } from 'src/web3/selectors'
@@ -62,10 +68,14 @@ const TAG = 'NavigationService'
 const Drawer = createDrawerNavigator()
 
 type CustomDrawerItemListProps = Omit<DrawerContentOptions, 'contentContainerStyle' | 'style'> & {
-  state: DrawerNavigationState
+  state: DrawerNavigationState<ParamListBase>
   navigation: DrawerNavigationHelpers
   descriptors: DrawerDescriptorMap
   protectedRoutes: string[]
+}
+
+interface DrawerItemParams {
+  onPress?: () => void
 }
 
 // This component has been taken from here:
@@ -97,10 +107,17 @@ function CustomDrawerItemList({
       if (protectedRoutes.includes(route.name) && activeRouteName !== route.name) {
         // Route should be protected by PIN code
         ensurePincode()
-          .then(navigateToItem)
+          .then((pinIsCorrect) => {
+            if (pinIsCorrect) {
+              navigateToItem()
+            }
+          })
           .catch((error) => {
             Logger.error(`${TAG}@onPress`, 'PIN ensure error', error)
           })
+      } else if (route.params && (route.params as DrawerItemParams).onPress) {
+        const drawerParams = route.params as DrawerItemParams
+        drawerParams.onPress?.()
       } else {
         navigateToItem()
       }
@@ -125,20 +142,34 @@ function CustomDrawerItemList({
 function CustomDrawerContent(props: DrawerContentComponentProps<DrawerContentOptions>) {
   const displayName = useSelector(nameSelector)
   const e164PhoneNumber = useSelector(e164NumberSelector)
-  const contactDetails = useSelector(userContactDetailsSelector)
   const defaultCountryCode = useSelector(defaultCountryCodeSelector)
   const dollarBalance = useSelector(stableTokenBalanceSelector)
   const dollarAmount = {
     value: dollarBalance ?? '0',
     currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code,
   }
+  const celoBalance = useSelector(celoTokenBalanceSelector)
+  const celoAmount = {
+    value: new BigNumber(celoBalance ?? '0'),
+    currencyCode: CURRENCIES[CURRENCY_ENUM.GOLD].code,
+  }
+  const hasCeloBalance = celoAmount.value.isGreaterThan(GOLD_TRANSACTION_MIN_AMOUNT)
   const account = useSelector(currentAccountSelector)
   const appVersion = deviceInfoModule.getVersion()
+
+  const dispatch = useDispatch()
+  useEffect(() => {
+    // Needed for the local CELO balance display
+    dispatch(fetchExchangeRate())
+  }, [])
 
   return (
     <DrawerContentScrollView {...props}>
       <View style={styles.drawerTop}>
-        <ContactCircle thumbnailPath={contactDetails.thumbnailPath} name={null} size={64} />
+        <View style={styles.drawerHeader}>
+          <ContactCircleSelf size={64} />
+          <RewardsPill />
+        </View>
         <Text style={styles.nameLabel}>{displayName}</Text>
         {e164PhoneNumber && (
           <PhoneNumberWithFlag
@@ -151,19 +182,40 @@ function CustomDrawerContent(props: DrawerContentComponentProps<DrawerContentOpt
           style={fontStyles.regular500}
           amount={dollarAmount}
           showLocalAmount={true}
+          testID="LocalDollarBalance"
         />
         <CurrencyDisplay
-          style={styles.dollarsLabel}
+          style={styles.amountLabelSmall}
           amount={dollarAmount}
           showLocalAmount={false}
           hideFullCurrencyName={false}
           hideSymbol={true}
+          testID="DollarBalance"
         />
         <View style={styles.borderBottom} />
+        {hasCeloBalance && (
+          <>
+            <CurrencyDisplay
+              style={fontStyles.regular500}
+              amount={celoAmount}
+              showLocalAmount={true}
+              testID="LocalCeloBalance"
+            />
+            <CurrencyDisplay
+              style={styles.amountLabelSmall}
+              amount={celoAmount}
+              showLocalAmount={false}
+              hideFullCurrencyName={false}
+              hideSymbol={true}
+              testID="CeloBalance"
+            />
+            <View style={styles.borderBottom} />
+          </>
+        )}
       </View>
       <CustomDrawerItemList {...props} protectedRoutes={[Screens.BackupIntroduction]} />
       <View style={styles.drawerBottom}>
-        <Text style={fontStyles.label}>Account No.</Text>
+        <Text style={fontStyles.label}>{i18n.t('dappkit:address')}</Text>
         <View style={styles.accountOuterContainer}>
           <View style={styles.accountInnerContainer}>
             <AccountNumber address={account || ''} location={Screens.DrawerNavigator} />
@@ -178,6 +230,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps<DrawerContentOpt
 export default function DrawerNavigator() {
   const { t } = useTranslation(Namespaces.global)
   const isCeloEducationComplete = useSelector((state) => state.goldToken.educationCompleted)
+  const dispatch = useDispatch()
 
   const drawerContent = (props: DrawerContentComponentProps<DrawerContentOptions>) => (
     <CustomDrawerContent {...props} />
@@ -225,6 +278,16 @@ export default function DrawerNavigator() {
         component={FiatExchange}
         options={{ title: t('addAndWithdraw'), drawerIcon: AddWithdraw }}
       />
+      {features.KOMENCI && (
+        <Drawer.Screen
+          name={'InviteModal'}
+          component={InviteFriendModal}
+          initialParams={{
+            onPress: () => dispatch(toggleInviteModal(true)),
+          }}
+          options={{ title: t('invite'), drawerIcon: Invite }}
+        />
+      )}
       <Drawer.Screen
         name={Screens.Settings}
         component={SettingsScreen}
@@ -246,6 +309,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginRight: 16,
   },
+  drawerHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   nameLabel: {
     ...fontStyles.displayName,
     marginTop: 8,
@@ -257,7 +325,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray2,
     alignSelf: 'stretch',
   },
-  dollarsLabel: {
+  amountLabelSmall: {
     ...fontStyles.small,
     color: colors.gray4,
     marginTop: 2,

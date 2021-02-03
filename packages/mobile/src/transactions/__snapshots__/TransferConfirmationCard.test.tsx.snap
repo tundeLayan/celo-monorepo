@@ -52,6 +52,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackground",
+                  "rippleRadius": undefined,
                   "type": "ThemeAttrAndroid",
                 }
               }
@@ -65,10 +66,13 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
             >
               <View
                 style={
-                  Object {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                  }
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                    },
+                    undefined,
+                  ]
                 }
               >
                 <Text
@@ -108,17 +112,6 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
                   </svg>
                 </View>
               </View>
-              <Text
-                style={
-                  Object {
-                    "color": "#9CA4A9",
-                    "fontFamily": "Inter-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                    "marginRight": 7,
-                  }
-                }
-              />
             </View>
           </View>
           <View
@@ -161,7 +154,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -169,24 +162,12 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
                     ]
                   }
                 >
-                  <Image
-                    source={
-                      Object {
-                        "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
-                      }
-                    }
-                    style={
-                      Array [
-                        Object {
-                          "alignSelf": "center",
-                          "margin": "auto",
-                        },
-                        Object {
-                          "height": 40,
-                          "width": 40,
-                        },
-                      ]
-                    }
+                  <svg
+                    fill="hsl(0, 53%, 93%)"
+                    height="40"
+                    style={Object {}}
+                    viewBox="0 0 40 40"
+                    width="40"
                   />
                 </View>
               </View>
@@ -251,7 +232,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -268,6 +249,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
                           "fontSize": 16,
                         },
                         Object {
+                          "color": "hsl(0, 67%, 24%)",
                           "fontSize": 20,
                         },
                       ]
@@ -388,7 +370,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -405,6 +387,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
           nativeBackgroundAndroid={
             Object {
               "attribute": "selectableItemBackground",
+              "rippleRadius": undefined,
               "type": "ThemeAttrAndroid",
             }
           }
@@ -426,10 +409,13 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
           >
             <View
               style={
-                Object {
-                  "alignItems": "center",
-                  "flexDirection": "row",
-                }
+                Array [
+                  Object {
+                    "alignItems": "center",
+                    "flexDirection": "row",
+                  },
+                  undefined,
+                ]
               }
             >
               <Text
@@ -524,7 +510,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
                     Array [
                       undefined,
                       Object {
-                        "color": undefined,
+                        "color": "#2E3338",
                       },
                     ]
                   }
@@ -604,7 +590,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -663,7 +649,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
                 Array [
                   undefined,
                   Object {
-                    "color": undefined,
+                    "color": "#2E3338",
                   },
                 ]
               }
@@ -698,7 +684,7 @@ exports[`TransferConfirmationCard renders correctly for CELO withdrawal transact
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -795,7 +781,7 @@ exports[`TransferConfirmationCard renders correctly for faucet drilldown 1`] = `
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -855,7 +841,7 @@ exports[`TransferConfirmationCard renders correctly for faucet drilldown 1`] = `
                 Array [
                   undefined,
                   Object {
-                    "color": undefined,
+                    "color": "#2E3338",
                   },
                 ]
               }
@@ -890,7 +876,7 @@ exports[`TransferConfirmationCard renders correctly for faucet drilldown 1`] = `
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -914,6 +900,476 @@ exports[`TransferConfirmationCard renders correctly for faucet drilldown 1`] = `
       >
         receiveFlow8:receivedAmountFromCelo
       </Text>
+    </RNCSafeAreaView>
+  </View>
+</RCTScrollView>
+`;
+
+exports[`TransferConfirmationCard renders correctly for received CELO reward 1`] = `
+<RCTScrollView
+  contentContainerStyle={
+    Object {
+      "flexGrow": 1,
+    }
+  }
+>
+  <View>
+    <RNCSafeAreaView
+      style={
+        Object {
+          "flexGrow": 1,
+          "padding": 16,
+        }
+      }
+    >
+      <View>
+        <View
+          style={
+            Object {
+              "flexDirection": "row",
+            }
+          }
+        >
+          <View
+            style={
+              Object {
+                "flex": 1,
+                "marginRight": 8,
+              }
+            }
+          >
+            <Text
+              style={
+                Object {
+                  "color": "#B4B9BD",
+                  "fontFamily": "Inter-SemiBold",
+                  "fontSize": 13,
+                  "lineHeight": 16,
+                  "marginBottom": 4,
+                }
+              }
+            >
+              receivedFrom
+            </Text>
+            <View
+              accessible={true}
+              focusable={false}
+              nativeBackgroundAndroid={
+                Object {
+                  "attribute": "selectableItemBackground",
+                  "rippleRadius": undefined,
+                  "type": "ThemeAttrAndroid",
+                }
+              }
+              onClick={[Function]}
+              onResponderGrant={[Function]}
+              onResponderMove={[Function]}
+              onResponderRelease={[Function]}
+              onResponderTerminate={[Function]}
+              onResponderTerminationRequest={[Function]}
+              onStartShouldSetResponder={[Function]}
+            >
+              <View
+                style={
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                    },
+                    undefined,
+                  ]
+                }
+              >
+                <Text
+                  style={
+                    Object {
+                      "color": "#2E3338",
+                      "fontFamily": "Inter-Regular",
+                      "fontSize": 16,
+                      "lineHeight": 22,
+                      "marginRight": 7,
+                    }
+                  }
+                >
+                  CELO Rewards
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View
+            style={
+              Object {
+                "justifyContent": "center",
+              }
+            }
+          >
+            <View
+              style={
+                Array [
+                  Object {
+                    "alignItems": "center",
+                    "flexDirection": "row",
+                  },
+                  false,
+                ]
+              }
+            >
+              <View
+                style={
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                      "justifyContent": "center",
+                    },
+                    undefined,
+                  ]
+                }
+              >
+                <View
+                  style={
+                    Array [
+                      Object {
+                        "alignItems": "center",
+                        "justifyContent": "center",
+                      },
+                      Object {
+                        "backgroundColor": "hsl(291, 53%, 93%)",
+                        "borderRadius": 20,
+                        "height": 40,
+                        "width": 40,
+                      },
+                    ]
+                  }
+                >
+                  <Text
+                    style={
+                      Array [
+                        Object {
+                          "color": "#FFFFFF",
+                          "fontFamily": "Inter-Medium",
+                          "fontSize": 16,
+                        },
+                        Object {
+                          "color": "hsl(291, 67%, 24%)",
+                          "fontSize": 20,
+                        },
+                      ]
+                    }
+                  >
+                    C
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "backgroundColor": "white",
+                      "borderRadius": 12,
+                      "elevation": 3,
+                      "height": 24,
+                      "justifyContent": "center",
+                      "shadowColor": "black",
+                      "shadowOffset": Object {
+                        "height": 1.5,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.3,
+                      "shadowRadius": 2.4000000000000004,
+                      "width": 24,
+                    },
+                    Object {
+                      "marginHorizontal": -8,
+                      "zIndex": 1,
+                    },
+                  ]
+                }
+              >
+                <svg
+                  fill="none"
+                  height={9}
+                  viewBox="0 0 13 9"
+                  width={13}
+                >
+                  <path
+                    d="M1 4.5h11m0 0L8.264 1M12 4.5L8.264 8"
+                    stroke="#2E3338"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                  />
+                </svg>
+              </View>
+              <View
+                style={
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                      "justifyContent": "center",
+                    },
+                    undefined,
+                  ]
+                }
+              >
+                <View
+                  style={
+                    Array [
+                      Object {
+                        "alignItems": "center",
+                        "justifyContent": "center",
+                      },
+                      Object {
+                        "backgroundColor": "hsl(0, 53%, 93%)",
+                        "borderRadius": 20,
+                        "height": 40,
+                        "width": 40,
+                      },
+                    ]
+                  }
+                >
+                  <Text
+                    style={
+                      Array [
+                        Object {
+                          "color": "#FFFFFF",
+                          "fontFamily": "Inter-Medium",
+                          "fontSize": 16,
+                        },
+                        Object {
+                          "color": "hsl(0, 67%, 24%)",
+                          "fontSize": 20,
+                        },
+                      ]
+                    }
+                  >
+                    J
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+      <View
+        accessible={true}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          Array [
+            undefined,
+            Object {
+              "opacity": 1,
+            },
+          ]
+        }
+        testID="celoRewards/learnMore"
+      >
+        <Text
+          style={
+            Object {
+              "color": "#9CA4A9",
+              "fontFamily": "Inter-Regular",
+              "fontSize": 14,
+              "lineHeight": 18,
+              "textDecorationLine": "underline",
+            }
+          }
+        >
+          learnMore
+        </Text>
+      </View>
+      <View
+        style={
+          Object {
+            "borderStyle": "solid",
+            "borderTopColor": "#F8F9F9",
+            "borderTopWidth": 1,
+            "marginBottom": 15,
+            "marginTop": 10,
+            "width": "100%",
+          }
+        }
+      />
+      <View
+        style={
+          Array [
+            Object {
+              "flexDirection": "row",
+              "justifyContent": "space-between",
+              "marginVertical": 5,
+            },
+            undefined,
+          ]
+        }
+      >
+        <View
+          style={
+            Object {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "marginRight": 5,
+            }
+          }
+        >
+          <Text
+            style={
+              Array [
+                Object {
+                  "color": "#2E3338",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 16,
+                  "lineHeight": 22,
+                },
+                Object {
+                  "color": "#2E3338",
+                  "fontFamily": "Inter-SemiBold",
+                  "fontSize": 16,
+                  "lineHeight": 22,
+                },
+              ]
+            }
+          >
+            total
+          </Text>
+        </View>
+        <Text
+          style={
+            Array [
+              Object {
+                "color": "#2E3338",
+                "fontFamily": "Inter-Regular",
+                "fontSize": 16,
+                "lineHeight": 22,
+              },
+              Object {
+                "color": "#2E3338",
+                "fontFamily": "Inter-SemiBold",
+                "fontSize": 16,
+                "lineHeight": 22,
+              },
+            ]
+          }
+        >
+          <Text
+            numberOfLines={1}
+            style={
+              Array [
+                undefined,
+                Object {
+                  "color": "#2E3338",
+                },
+              ]
+            }
+          >
+            
+            $
+            133.00
+          </Text>
+        </Text>
+      </View>
+      <View
+        style={
+          Array [
+            Object {
+              "flexDirection": "row",
+              "justifyContent": "space-between",
+              "marginVertical": 5,
+            },
+            Object {
+              "marginVertical": 0,
+            },
+          ]
+        }
+      >
+        <View
+          style={
+            Object {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "marginRight": 5,
+            }
+          }
+        >
+          <Text
+            style={
+              Array [
+                Object {
+                  "color": "#2E3338",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 16,
+                  "lineHeight": 22,
+                },
+                Object {
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                },
+              ]
+            }
+          >
+            Celo Dollars @
+             
+            <Text
+              numberOfLines={1}
+              style={
+                Array [
+                  undefined,
+                  Object {
+                    "color": "#2E3338",
+                  },
+                ]
+              }
+            >
+              
+              $
+              0.75
+            </Text>
+          </Text>
+        </View>
+        <Text
+          style={
+            Array [
+              Object {
+                "color": "#2E3338",
+                "fontFamily": "Inter-Regular",
+                "fontSize": 16,
+                "lineHeight": 22,
+              },
+              Object {
+                "color": "#9CA4A9",
+                "fontFamily": "Inter-Regular",
+                "fontSize": 14,
+                "lineHeight": 18,
+              },
+            ]
+          }
+        >
+          <Text
+            numberOfLines={1}
+            style={
+              Array [
+                undefined,
+                Object {
+                  "color": "#2E3338",
+                },
+              ]
+            }
+          >
+            
+            100.00
+          </Text>
+        </Text>
+      </View>
     </RNCSafeAreaView>
   </View>
 </RCTScrollView>
@@ -971,6 +1427,7 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackground",
+                  "rippleRadius": undefined,
                   "type": "ThemeAttrAndroid",
                 }
               }
@@ -984,10 +1441,13 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
             >
               <View
                 style={
-                  Object {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                  }
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                    },
+                    undefined,
+                  ]
                 }
               >
                 <Text
@@ -1027,17 +1487,6 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
                   </svg>
                 </View>
               </View>
-              <Text
-                style={
-                  Object {
-                    "color": "#9CA4A9",
-                    "fontFamily": "Inter-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                    "marginRight": 7,
-                  }
-                }
-              />
             </View>
           </View>
           <View
@@ -1078,7 +1527,7 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -1086,24 +1535,12 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
                     ]
                   }
                 >
-                  <Image
-                    source={
-                      Object {
-                        "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
-                      }
-                    }
-                    style={
-                      Array [
-                        Object {
-                          "alignSelf": "center",
-                          "margin": "auto",
-                        },
-                        Object {
-                          "height": 40,
-                          "width": 40,
-                        },
-                      ]
-                    }
+                  <svg
+                    fill="hsl(0, 53%, 93%)"
+                    height="40"
+                    style={Object {}}
+                    viewBox="0 0 40 40"
+                    width="40"
                   />
                 </View>
               </View>
@@ -1168,7 +1605,7 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -1185,6 +1622,7 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
                           "fontSize": 16,
                         },
                         Object {
+                          "color": "hsl(0, 67%, 24%)",
                           "fontSize": 20,
                         },
                       ]
@@ -1276,7 +1714,7 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -1336,7 +1774,7 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
                 Array [
                   undefined,
                   Object {
-                    "color": undefined,
+                    "color": "#2E3338",
                   },
                 ]
               }
@@ -1371,7 +1809,7 @@ exports[`TransferConfirmationCard renders correctly for received escrow transact
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -1438,6 +1876,7 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackground",
+                  "rippleRadius": undefined,
                   "type": "ThemeAttrAndroid",
                 }
               }
@@ -1451,10 +1890,13 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
             >
               <View
                 style={
-                  Object {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                  }
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                    },
+                    undefined,
+                  ]
                 }
               >
                 <Text
@@ -1494,17 +1936,6 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
                   </svg>
                 </View>
               </View>
-              <Text
-                style={
-                  Object {
-                    "color": "#9CA4A9",
-                    "fontFamily": "Inter-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                    "marginRight": 7,
-                  }
-                }
-              />
             </View>
           </View>
           <View
@@ -1545,7 +1976,7 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -1553,24 +1984,12 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
                     ]
                   }
                 >
-                  <Image
-                    source={
-                      Object {
-                        "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
-                      }
-                    }
-                    style={
-                      Array [
-                        Object {
-                          "alignSelf": "center",
-                          "margin": "auto",
-                        },
-                        Object {
-                          "height": 40,
-                          "width": 40,
-                        },
-                      ]
-                    }
+                  <svg
+                    fill="hsl(0, 53%, 93%)"
+                    height="40"
+                    style={Object {}}
+                    viewBox="0 0 40 40"
+                    width="40"
                   />
                 </View>
               </View>
@@ -1635,7 +2054,7 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -1652,6 +2071,7 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
                           "fontSize": 16,
                         },
                         Object {
+                          "color": "hsl(0, 67%, 24%)",
                           "fontSize": 20,
                         },
                       ]
@@ -1743,7 +2163,7 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -1803,7 +2223,7 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
                 Array [
                   undefined,
                   Object {
-                    "color": undefined,
+                    "color": "#2E3338",
                   },
                 ]
               }
@@ -1838,7 +2258,7 @@ exports[`TransferConfirmationCard renders correctly for received transaction dri
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -1905,6 +2325,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackground",
+                  "rippleRadius": undefined,
                   "type": "ThemeAttrAndroid",
                 }
               }
@@ -1918,10 +2339,13 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
             >
               <View
                 style={
-                  Object {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                  }
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                    },
+                    undefined,
+                  ]
                 }
               >
                 <Text
@@ -1961,17 +2385,6 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
                   </svg>
                 </View>
               </View>
-              <Text
-                style={
-                  Object {
-                    "color": "#9CA4A9",
-                    "fontFamily": "Inter-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                    "marginRight": 7,
-                  }
-                }
-              />
             </View>
           </View>
           <View
@@ -2014,7 +2427,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -2022,24 +2435,12 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
                     ]
                   }
                 >
-                  <Image
-                    source={
-                      Object {
-                        "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
-                      }
-                    }
-                    style={
-                      Array [
-                        Object {
-                          "alignSelf": "center",
-                          "margin": "auto",
-                        },
-                        Object {
-                          "height": 40,
-                          "width": 40,
-                        },
-                      ]
-                    }
+                  <svg
+                    fill="hsl(0, 53%, 93%)"
+                    height="40"
+                    style={Object {}}
+                    viewBox="0 0 40 40"
+                    width="40"
                   />
                 </View>
               </View>
@@ -2104,7 +2505,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -2121,6 +2522,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
                           "fontSize": 16,
                         },
                         Object {
+                          "color": "hsl(0, 67%, 24%)",
                           "fontSize": 20,
                         },
                       ]
@@ -2241,7 +2643,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -2258,6 +2660,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
           nativeBackgroundAndroid={
             Object {
               "attribute": "selectableItemBackground",
+              "rippleRadius": undefined,
               "type": "ThemeAttrAndroid",
             }
           }
@@ -2279,10 +2682,13 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
           >
             <View
               style={
-                Object {
-                  "alignItems": "center",
-                  "flexDirection": "row",
-                }
+                Array [
+                  Object {
+                    "alignItems": "center",
+                    "flexDirection": "row",
+                  },
+                  undefined,
+                ]
               }
             >
               <Text
@@ -2377,7 +2783,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
                     Array [
                       undefined,
                       Object {
-                        "color": undefined,
+                        "color": "#2E3338",
                       },
                     ]
                   }
@@ -2457,7 +2863,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -2516,7 +2922,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
                 Array [
                   undefined,
                   Object {
-                    "color": undefined,
+                    "color": "#2E3338",
                   },
                 ]
               }
@@ -2551,7 +2957,7 @@ exports[`TransferConfirmationCard renders correctly for sent escrow transaction 
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -2617,6 +3023,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackground",
+                  "rippleRadius": undefined,
                   "type": "ThemeAttrAndroid",
                 }
               }
@@ -2630,10 +3037,13 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
             >
               <View
                 style={
-                  Object {
-                    "alignItems": "center",
-                    "flexDirection": "row",
-                  }
+                  Array [
+                    Object {
+                      "alignItems": "center",
+                      "flexDirection": "row",
+                    },
+                    undefined,
+                  ]
                 }
               >
                 <Text
@@ -2673,17 +3083,6 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
                   </svg>
                 </View>
               </View>
-              <Text
-                style={
-                  Object {
-                    "color": "#9CA4A9",
-                    "fontFamily": "Inter-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                    "marginRight": 7,
-                  }
-                }
-              />
             </View>
           </View>
           <View
@@ -2726,7 +3125,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -2734,24 +3133,12 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
                     ]
                   }
                 >
-                  <Image
-                    source={
-                      Object {
-                        "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
-                      }
-                    }
-                    style={
-                      Array [
-                        Object {
-                          "alignSelf": "center",
-                          "margin": "auto",
-                        },
-                        Object {
-                          "height": 40,
-                          "width": 40,
-                        },
-                      ]
-                    }
+                  <svg
+                    fill="hsl(0, 53%, 93%)"
+                    height="40"
+                    style={Object {}}
+                    viewBox="0 0 40 40"
+                    width="40"
                   />
                 </View>
               </View>
@@ -2816,7 +3203,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
                         "justifyContent": "center",
                       },
                       Object {
-                        "backgroundColor": "#7AD6FE",
+                        "backgroundColor": "hsl(0, 53%, 93%)",
                         "borderRadius": 20,
                         "height": 40,
                         "width": 40,
@@ -2833,6 +3220,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
                           "fontSize": 16,
                         },
                         Object {
+                          "color": "hsl(0, 67%, 24%)",
                           "fontSize": 20,
                         },
                       ]
@@ -2953,7 +3341,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -2970,6 +3358,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
           nativeBackgroundAndroid={
             Object {
               "attribute": "selectableItemBackground",
+              "rippleRadius": undefined,
               "type": "ThemeAttrAndroid",
             }
           }
@@ -2991,10 +3380,13 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
           >
             <View
               style={
-                Object {
-                  "alignItems": "center",
-                  "flexDirection": "row",
-                }
+                Array [
+                  Object {
+                    "alignItems": "center",
+                    "flexDirection": "row",
+                  },
+                  undefined,
+                ]
               }
             >
               <Text
@@ -3089,7 +3481,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
                     Array [
                       undefined,
                       Object {
-                        "color": undefined,
+                        "color": "#2E3338",
                       },
                     ]
                   }
@@ -3169,7 +3561,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -3228,7 +3620,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
                 Array [
                   undefined,
                   Object {
-                    "color": undefined,
+                    "color": "#2E3338",
                   },
                 ]
               }
@@ -3263,7 +3655,7 @@ exports[`TransferConfirmationCard renders correctly for sent transaction drilldo
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -3360,7 +3752,7 @@ exports[`TransferConfirmationCard renders correctly for verification fee drilldo
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }
@@ -3419,7 +3811,7 @@ exports[`TransferConfirmationCard renders correctly for verification fee drilldo
                 Array [
                   undefined,
                   Object {
-                    "color": undefined,
+                    "color": "#2E3338",
                   },
                 ]
               }
@@ -3454,7 +3846,7 @@ exports[`TransferConfirmationCard renders correctly for verification fee drilldo
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }

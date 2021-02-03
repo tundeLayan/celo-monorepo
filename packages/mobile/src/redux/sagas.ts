@@ -1,12 +1,14 @@
+import { sleep } from '@celo/utils/lib/async'
 import { AnyAction } from 'redux'
 import { call, select, spawn, takeEvery } from 'redux-saga/effects'
 import { accountSaga } from 'src/account/saga'
 import { devModeSelector } from 'src/account/selectors'
-import { appInit, appSaga } from 'src/app/saga'
+import { appInit, appRemoteFeatureFlagSaga, appSaga, appVersionSaga } from 'src/app/saga'
 import { dappKitSaga } from 'src/dappkit/dappkit'
 import { escrowSaga } from 'src/escrow/saga'
 import { exchangeSaga } from 'src/exchange/saga'
 import { feesSaga } from 'src/fees/saga'
+import { fiatExchangesSaga } from 'src/fiatExchanges/saga'
 import { firebaseSaga } from 'src/firebase/saga'
 import { gethSaga } from 'src/geth/saga'
 import { goldTokenSaga } from 'src/goldToken/saga'
@@ -22,6 +24,7 @@ import { sendSaga } from 'src/send/saga'
 import { sentrySaga } from 'src/sentry/saga'
 import { stableTokenSaga } from 'src/stableToken/saga'
 import { transactionSaga } from 'src/transactions/saga'
+import { checkAccountExistenceSaga } from 'src/utils/accountChecker'
 import Logger from 'src/utils/Logger'
 import { web3Saga } from 'src/web3/saga'
 
@@ -66,6 +69,13 @@ function* loggerSaga() {
   })
 }
 
+let sagasFinishedLoading = false
+export async function waitUntilSagasFinishLoading() {
+  while (!sagasFinishedLoading) {
+    await sleep(100)
+  }
+}
+
 export function* rootSaga() {
   // Delay all sagas until rehydrate is done
   // This prevents them from running with missing state
@@ -73,6 +83,8 @@ export function* rootSaga() {
   yield call(appInit)
 
   // Note, the order of these does matter in certain cases
+  yield spawn(appVersionSaga)
+  yield spawn(appRemoteFeatureFlagSaga)
   yield spawn(loggerSaga)
   yield spawn(appSaga)
   yield spawn(sentrySaga)
@@ -95,4 +107,8 @@ export function* rootSaga() {
   yield spawn(inviteSaga)
   yield spawn(importSaga)
   yield spawn(dappKitSaga)
+  yield spawn(checkAccountExistenceSaga)
+  yield spawn(fiatExchangesSaga)
+
+  sagasFinishedLoading = true
 }

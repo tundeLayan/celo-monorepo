@@ -1,3 +1,5 @@
+import { AddressToDisplayNameType } from 'src/identity/reducer'
+
 export const migrations = {
   0: (state: any) => {
     const e164NumberToAddressOld = state.identity.e164NumberToAddress
@@ -79,6 +81,34 @@ export const migrations = {
         ...state.web3,
         dataEncryptionKey: state.web3.commentKey,
         commentKey: undefined,
+      },
+    }
+  },
+  6: (state: any) => {
+    return {
+      ...state,
+      invite: {
+        ...state.invite,
+        redeemComplete: !!state.web3.account,
+      },
+    }
+  },
+  7: (state: any) => {
+    const newAddressToDisplayName = Object.keys(state.identity.addressToDisplayName).reduce(
+      (newMapping: AddressToDisplayNameType, address: string) => {
+        newMapping[address] = {
+          name: state.identity.addressToDisplayName[address],
+          imageUrl: null,
+        }
+        return newMapping
+      },
+      {}
+    )
+    return {
+      ...state,
+      identity: {
+        ...state.identity,
+        addressToDisplayName: newAddressToDisplayName,
       },
     }
   },

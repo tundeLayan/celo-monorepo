@@ -82,10 +82,15 @@ export const coerceMnemonicAccountType = (raw: string): AccountType => {
 }
 
 export const generatePrivateKey = (mnemonic: string, accountType: AccountType, index: number) => {
+  return generatePrivateKeyWithDerivations(mnemonic, [accountType, index])
+}
+
+export const generatePrivateKeyWithDerivations = (mnemonic: string, derivations: number[]) => {
   const seed = bip39.mnemonicToSeedSync(mnemonic)
   const node = bip32.fromSeed(seed)
-  const newNode = node.derive(accountType).derive(index)
-
+  const newNode = derivations.reduce((n: bip32.BIP32Interface, derivation: number) => {
+    return n.derive(derivation)
+  }, node)
   return newNode.privateKey!.toString('hex')
 }
 
@@ -218,6 +223,15 @@ export const getFaucetedAccounts = (mnemonic: string) => {
   return [...faucetAccounts, ...loadTestAccounts, ...oracleAccounts, ...votingBotAccounts]
 }
 
+const hardForkActivationBlock = (key: string) => {
+  const value = fetchEnvOrFallback(key, '')
+  if (value === '') {
+    return undefined
+  } else {
+    return parseInt(value, 10)
+  }
+}
+
 export const generateGenesisFromEnv = (enablePetersburg: boolean = true) => {
   const mnemonic = fetchEnv(envVar.MNEMONIC)
   const validatorEnv = parseInt(fetchEnv(envVar.VALIDATORS), 10)
@@ -266,6 +280,10 @@ export const generateGenesisFromEnv = (enablePetersburg: boolean = true) => {
     })
   )
 
+  // Celo hard fork activation blocks.  Default is undefined, which means not activated.
+  const churritoBlock = hardForkActivationBlock(envVar.CHURRITO_BLOCK)
+  const donutBlock = hardForkActivationBlock(envVar.DONUT_BLOCK)
+
   // network start timestamp
   const timestamp = parseInt(fetchEnvOrFallback(envVar.TIMESTAMP, '0'), 10)
 
@@ -280,6 +298,8 @@ export const generateGenesisFromEnv = (enablePetersburg: boolean = true) => {
     requestTimeout,
     enablePetersburg,
     timestamp,
+    churritoBlock,
+    donutBlock,
   })
 }
 
@@ -336,11 +356,20 @@ export const generateGenesis = ({
   requestTimeout,
   enablePetersburg = true,
   timestamp = 0,
+  churritoBlock,
+  donutBlock,
 }: GenesisConfig): string => {
   const genesis: any = { ...TEMPLATE }
 
   if (!enablePetersburg) {
     genesis.config = GETH_CONFIG_OLD
+  }
+
+  if (typeof churritoBlock === 'number') {
+    genesis.config.churritoBlock = churritoBlock;
+  }
+  if (typeof donutBlock === 'number') {
+    genesis.config.donutBlock = donutBlock;
   }
 
   genesis.config.chainId = chainId

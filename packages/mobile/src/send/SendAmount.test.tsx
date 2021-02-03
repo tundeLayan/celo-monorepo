@@ -1,9 +1,11 @@
 import BigNumber from 'bignumber.js'
 import * as React from 'react'
+import { ActivityIndicator } from 'react-native'
 import * as RNLocalize from 'react-native-localize'
 import { fireEvent, render, RenderAPI } from 'react-native-testing-library'
 import { Provider } from 'react-redux'
 import { ErrorDisplayType } from 'src/alert/reducer'
+import { SendOrigin } from 'src/analytics/types'
 import { TokenTransactionType } from 'src/apollo/types'
 import { AddressValidationType, E164NumberToAddressType } from 'src/identity/reducer'
 import { navigate } from 'src/navigator/NavigationService'
@@ -44,7 +46,7 @@ const mockE164NumberToAddress: E164NumberToAddressType = {
 const mockTransactionData2 = {
   type: mockTransactionData.type,
   recipient: mockTransactionData.recipient,
-  amount: new BigNumber('3.70676691729323309'),
+  amount: new BigNumber('3.706766917293233083'),
   reason: '',
 }
 
@@ -52,6 +54,7 @@ const mockScreenProps = (isOutgoingPaymentRequest?: true) =>
   getMockStackScreenProps(Screens.SendAmount, {
     recipient: mockTransactionData.recipient,
     isOutgoingPaymentRequest,
+    origin: SendOrigin.AppSendFlow,
   })
 
 const enterAmount = (wrapper: RenderAPI, text: string) => {
@@ -119,6 +122,7 @@ describe('SendAmount', () => {
       fireEvent.press(reviewButton)
       expect(store.getActions()).toEqual([
         {
+          action: null,
           alertType: 'error',
           buttonMessage: null,
           dismissAfter: 5000,
@@ -147,6 +151,7 @@ describe('SendAmount', () => {
       fireEvent.press(sendButton)
       expect(store.getActions()).toEqual([
         {
+          action: null,
           alertType: 'error',
           buttonMessage: null,
           dismissAfter: 5000,
@@ -190,7 +195,7 @@ describe('SendAmount', () => {
       enterAmount(tree, AMOUNT_VALID)
       fireEvent.press(tree.getByTestId('Review'))
 
-      expect(tree.getByTestId('loading/SendAmount')).toBeTruthy()
+      expect(tree.getByType(ActivityIndicator)).toBeTruthy()
 
       store = createMockStore({
         identity: {
@@ -211,6 +216,7 @@ describe('SendAmount', () => {
       )
 
       expect(navigate).toHaveBeenCalledWith(Screens.SendConfirmation, {
+        origin: SendOrigin.AppSendFlow,
         transactionData: mockTransactionData2,
       })
     })
@@ -238,6 +244,7 @@ describe('SendAmount', () => {
       enterAmount(tree, AMOUNT_VALID)
       fireEvent.press(tree.getByTestId('Review'))
       expect(navigate).toHaveBeenCalledWith(Screens.ValidateRecipientIntro, {
+        origin: SendOrigin.AppSendFlow,
         transactionData: mockTransactionData2,
         addressValidationType: AddressValidationType.FULL,
       })
@@ -264,6 +271,7 @@ describe('SendAmount', () => {
       enterAmount(tree, AMOUNT_VALID)
       fireEvent.press(tree.getByTestId('Review'))
       expect(navigate).toHaveBeenCalledWith(Screens.SendConfirmation, {
+        origin: SendOrigin.AppSendFlow,
         transactionData: mockTransactionData2,
       })
     })
@@ -292,6 +300,7 @@ describe('SendAmount', () => {
       fireEvent.press(tree.getByTestId('Review'))
 
       expect(navigate).toHaveBeenCalledWith(Screens.ValidateRecipientIntro, {
+        origin: SendOrigin.AppSendFlow,
         transactionData: mockTransactionData2,
         addressValidationType: AddressValidationType.FULL,
         isOutgoingPaymentRequest: true,

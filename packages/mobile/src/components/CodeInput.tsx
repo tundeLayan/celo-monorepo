@@ -1,13 +1,14 @@
 import Card from '@celo/react-components/components/Card'
-import TextInput from '@celo/react-components/components/TextInput.v2'
+import TextInput, { LINE_HEIGHT } from '@celo/react-components/components/TextInput'
 import Checkmark from '@celo/react-components/icons/Checkmark'
 import colors from '@celo/react-components/styles/colors'
-import fontStyles from '@celo/react-components/styles/fonts.v2'
-import { Shadow, Spacing } from '@celo/react-components/styles/styles.v2'
+import fontStyles from '@celo/react-components/styles/fonts'
+import { Shadow, Spacing } from '@celo/react-components/styles/styles'
 import React, { useLayoutEffect } from 'react'
 import {
   ActivityIndicator,
   LayoutAnimation,
+  Platform,
   StyleProp,
   StyleSheet,
   Text,
@@ -34,6 +35,7 @@ export interface Props {
   onInputChange: (value: string) => void
   shouldShowClipboard: (value: string) => boolean
   multiline?: boolean
+  numberOfLines?: number
   testID?: string
   style?: StyleProp<ViewStyle>
 }
@@ -47,20 +49,24 @@ export default function CodeInput({
   onInputChange,
   shouldShowClipboard,
   multiline,
+  numberOfLines,
   testID,
   style,
 }: Props) {
-  const clipboardContent = useClipboard()
+  const [forceShowingPasteIcon, clipboardContent, getFreshClipboardContent] = useClipboard()
 
   // LayoutAnimation when switching to/from input
   useLayoutEffect(() => {
     LayoutAnimation.easeInEaseOut()
   }, [status === CodeInputStatus.INPUTTING])
 
-  function shouldShowClipboardInternal(clipboard: string) {
+  function shouldShowClipboardInternal() {
+    if (forceShowingPasteIcon) {
+      return true
+    }
     return (
-      !inputValue.toLowerCase().startsWith(clipboard.toLowerCase()) &&
-      shouldShowClipboard(clipboard)
+      !inputValue.toLowerCase().startsWith(clipboardContent.toLowerCase()) &&
+      shouldShowClipboard(clipboardContent)
     )
   }
 
@@ -84,13 +90,33 @@ export default function CodeInput({
               <TextInput
                 value={inputValue}
                 placeholder={
-                  inputPlaceholderWithClipboardContent &&
-                  shouldShowClipboardInternal(clipboardContent)
+                  inputPlaceholderWithClipboardContent && shouldShowClipboardInternal()
                     ? inputPlaceholderWithClipboardContent
                     : inputPlaceholder
                 }
                 onChangeText={onInputChange}
                 multiline={multiline}
+                // This disables keyboard suggestions on iOS, but unfortunately NOT on Android
+                // Though `InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS` is correctly set on the native input,
+                // most Android keyboards ignore it :/
+                autoCorrect={false}
+                // On Android, the only known hack for now to disable keyboard suggestions
+                // is to set the keyboard type to 'visible-password' which sets `InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD`
+                // on the native input. Though it doesn't work in all cases (see https://stackoverflow.com/a/33227237/158525)
+                // and has the unfortunate drawback of breaking multiline autosize.
+                // We use numberOfLines to workaround this last problem.
+                keyboardType={Platform.OS === 'android' ? 'visible-password' : undefined}
+                // numberOfLines is currently Android only on TextInput
+                // workaround is to set the minHeight on iOS :/
+                numberOfLines={Platform.OS === 'ios' ? undefined : numberOfLines}
+                inputStyle={
+                  Platform.OS === 'ios' && numberOfLines
+                    ? {
+                        minHeight: LINE_HEIGHT * numberOfLines,
+                      }
+                    : undefined
+                }
+                autoCapitalize="none"
                 testID={testID}
               />
             ) : (
@@ -108,8 +134,8 @@ export default function CodeInput({
         </View>
         {showInput && (
           <ClipboardAwarePasteButton
-            clipboardContent={clipboardContent}
-            shouldShow={shouldShowClipboardInternal}
+            getClipboardContent={getFreshClipboardContent}
+            shouldShow={shouldShowClipboardInternal()}
             onPress={onInputChange}
           />
         )}

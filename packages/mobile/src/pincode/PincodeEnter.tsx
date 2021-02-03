@@ -2,7 +2,7 @@
  * This is a reactnavigation SCREEN to which we navigate,
  * when we need to fetch a PIN from a user.
  */
-import { StackCardInterpolationProps, StackScreenProps } from '@react-navigation/stack'
+import { StackScreenProps } from '@react-navigation/stack'
 import * as React from 'react'
 import { WithTranslation } from 'react-i18next'
 import { StyleSheet } from 'react-native'
@@ -10,7 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { connect } from 'react-redux'
 import { ErrorMessages } from 'src/app/ErrorMessages'
 import { Namespaces, withTranslation } from 'src/i18n'
-import { headerWithBackButton } from 'src/navigator/Headers.v2'
+import { headerWithBackButton } from 'src/navigator/Headers'
+import { modalScreenOptions } from 'src/navigator/Navigator'
 import { Screens } from 'src/navigator/Screens'
 import { StackParamList } from 'src/navigator/types'
 import { checkPin } from 'src/pincode/authentication'
@@ -21,28 +22,34 @@ import { currentAccountSelector } from 'src/web3/selectors'
 interface State {
   pin: string
   errorText: string | undefined
+  pinIsCorrect: boolean
 }
 
 interface StateProps {
   currentAccount: string | null
 }
 
-type Props = StateProps & WithTranslation & StackScreenProps<StackParamList, Screens.PincodeEnter>
+type RouteProps = StackScreenProps<StackParamList, Screens.PincodeEnter>
+type Props = StateProps & WithTranslation & RouteProps
 
 class PincodeEnter extends React.Component<Props, State> {
-  static navigationOptions = {
+  static navigationOptions = (navOptions: RouteProps) => ({
+    ...modalScreenOptions(navOptions),
     ...headerWithBackButton,
     gestureEnabled: false,
-    cardStyleInterpolator: ({ current }: StackCardInterpolationProps) => ({
-      containerStyle: {
-        opacity: current.progress,
-      },
-    }),
-  }
+  })
 
   state = {
     pin: '',
     errorText: undefined,
+    pinIsCorrect: false,
+  }
+
+  componentWillUnmount() {
+    const onCancel = this.props.route.params.onCancel
+    if (onCancel && !this.state.pinIsCorrect) {
+      onCancel()
+    }
   }
 
   onChangePin = (pin: string) => {
@@ -50,6 +57,7 @@ class PincodeEnter extends React.Component<Props, State> {
   }
 
   onCorrectPin = (pin: string) => {
+    this.setState({ pinIsCorrect: true })
     const onSuccess = this.props.route.params.onSuccess
     if (onSuccess) {
       onSuccess(pin)
@@ -82,7 +90,7 @@ class PincodeEnter extends React.Component<Props, State> {
     const { t } = this.props
     const { pin, errorText } = this.state
     return (
-      <SafeAreaView style={style.container}>
+      <SafeAreaView style={styles.container}>
         <Pincode
           title={t('confirmPin.title')}
           errorText={errorText}
@@ -95,7 +103,7 @@ class PincodeEnter extends React.Component<Props, State> {
   }
 }
 
-const style = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'space-between',

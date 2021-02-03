@@ -1,16 +1,10 @@
-import {
-  encodeTransaction,
-  extractSignature,
-  RLPEncodedTx,
-  rlpEncodedTx,
-} from '@celo/contractkit/lib/utils/signing-utils'
-import { Signer } from '@celo/contractkit/lib/wallets/signers/signer'
-import { ensureLeading0x } from '@celo/utils/lib/address'
-import { normalizeAddressWith0x } from '@celo/utils/src/address'
+import { ensureLeading0x, normalizeAddressWith0x } from '@celo/base/lib/address'
+import { CeloTx, RLPEncodedTx, Signer } from '@celo/connect'
+import { EIP712TypedData, generateTypedDataHash } from '@celo/utils/lib/sign-typed-data-utils'
+import { encodeTransaction, extractSignature, rlpEncodedTx } from '@celo/wallet-base'
 import * as ethUtil from 'ethereumjs-util'
 import { GethNativeModule } from 'react-native-geth'
 import Logger from 'src/utils/Logger'
-import { Tx } from 'web3-core'
 
 const INCORRECT_PASSWORD_ERROR = 'could not decrypt key with given password'
 const currentTimeInSeconds = () => Math.floor(Date.now() / 1000)
@@ -42,7 +36,7 @@ export class GethNativeBridgeSigner implements Signer {
     return this.geth.addAccount(this.hexToBase64(privateKey), passphrase)
   }
 
-  async signRawTransaction(tx: Tx) {
+  async signRawTransaction(tx: CeloTx) {
     if (normalizeAddressWith0x(tx.from! as string) !== this.account) {
       throw new Error(`RNGethSigner(${this.account}) cannot sign tx with 'from' ${tx.from}`)
     }
@@ -67,6 +61,15 @@ export class GethNativeBridgeSigner implements Signer {
   async signPersonalMessage(data: string): Promise<{ v: number; r: Buffer; s: Buffer }> {
     Logger.info(`${TAG}@signPersonalMessage`, `Signing ${data}`)
     const hash = ethUtil.hashPersonalMessage(Buffer.from(data.replace('0x', ''), 'hex'))
+    const signatureBase64 = await this.geth.signHash(hash.toString('base64'), this.account)
+    return ethUtil.fromRpcSig(this.base64ToHex(signatureBase64))
+  }
+
+  async signTypedData(typedData: EIP712TypedData): Promise<{ v: number; r: Buffer; s: Buffer }> {
+    // TODO: Not sure if it makes more sense to expose a `signTypedData` function on the RN Bridge
+    // or just construct the hash here.
+    Logger.info(`${TAG}@signTypedData`, `Signing typed data`)
+    const hash = generateTypedDataHash(typedData)
     const signatureBase64 = await this.geth.signHash(hash.toString('base64'), this.account)
     return ethUtil.fromRpcSig(this.base64ToHex(signatureBase64))
   }
@@ -101,6 +104,10 @@ export class GethNativeBridgeSigner implements Signer {
 
   decrypt(_ciphertext: Buffer) {
     return Promise.reject(new Error('Decryption operation is not supported on this signer'))
+  }
+
+  computeSharedSecret(_publicKey: string): Promise<Buffer> {
+    return Promise.reject(new Error('computeSharedSecret is not supported on this signer'))
   }
 
   hexToBase64(hex: string) {

@@ -14,7 +14,7 @@ import Animated, { call, greaterThan, onChange } from 'react-native-reanimated'
 import { ScrollPager } from 'react-native-tab-view'
 import { useDispatch } from 'react-redux'
 import { Namespaces } from 'src/i18n'
-import { noHeader } from 'src/navigator/Headers.v2'
+import { noHeader } from 'src/navigator/Headers'
 import { Screens } from 'src/navigator/Screens'
 import { QRTabParamList } from 'src/navigator/types'
 import QRCode from 'src/qrcode/QRCode'
@@ -63,19 +63,19 @@ function AnimatedScannerScene({ route, position, ...props }: AnimatedScannerScen
   )
 
   const animatedStyle = useMemo(() => {
-    const opacity = Animated.interpolate(position, {
+    const opacity = Animated.interpolateNode(position, {
       inputRange: [0, 1],
       outputRange: [0, 1],
       extrapolate: Animated.Extrapolate.CLAMP,
     })
 
-    const translateX = Animated.interpolate(position, {
+    const translateX = Animated.interpolateNode(position, {
       inputRange: [0, 1],
       outputRange: [-width, 0],
       extrapolate: Animated.Extrapolate.CLAMP,
     })
 
-    const scale = Animated.interpolate(position, {
+    const scale = Animated.interpolateNode(position, {
       inputRange: [0, 1],
       outputRange: [0.7, 1],
       extrapolate: Animated.Extrapolate.CLAMP,

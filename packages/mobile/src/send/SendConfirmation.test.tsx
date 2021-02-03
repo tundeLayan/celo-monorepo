@@ -2,6 +2,10 @@ import BigNumber from 'bignumber.js'
 import * as React from 'react'
 import { fireEvent, render, waitForElement } from 'react-native-testing-library'
 import { Provider } from 'react-redux'
+import { ErrorDisplayType } from 'src/alert/reducer'
+import { SendOrigin } from 'src/analytics/types'
+import { ErrorMessages } from 'src/app/ErrorMessages'
+import { features } from 'src/flags'
 import { AddressValidationType, E164NumberToAddressType } from 'src/identity/reducer'
 import { navigate } from 'src/navigator/NavigationService'
 import { Screens } from 'src/navigator/Screens'
@@ -12,6 +16,7 @@ import {
   mockAccount2Invite,
   mockAccountInvite,
   mockE164NumberInvite,
+  mockInviteTransactionData,
   mockTransactionData,
 } from 'test/values'
 
@@ -23,11 +28,24 @@ const mockedGetSendFee = getSendFee as jest.Mock
 
 const mockScreenProps = getMockStackScreenProps(Screens.SendConfirmation, {
   transactionData: mockTransactionData,
+  origin: SendOrigin.AppSendFlow,
+})
+
+const mockInviteScreenProps = getMockStackScreenProps(Screens.SendConfirmation, {
+  transactionData: mockInviteTransactionData,
+  origin: SendOrigin.AppSendFlow,
 })
 
 describe('SendConfirmation', () => {
+  const komenciEnabled = features.KOMENCI
+
   beforeAll(() => {
+    features.KOMENCI = false
     jest.useRealTimers()
+  })
+
+  afterAll(() => {
+    features.KOMENCI = komenciEnabled
   })
 
   beforeEach(() => {
@@ -66,9 +84,9 @@ describe('SendConfirmation', () => {
     // expect(toJSON()).toMatchSnapshot()
   })
 
-  it('renders correctly for send payment confirmation when fee calculation fails', async () => {
+  it('shows a generic `calculateFeeFailed` error when fee estimate fails due to an unknown error', async () => {
     mockedGetSendFee.mockImplementation(async () => {
-      throw new Error('Calculate fee failed')
+      throw new Error('Unknown error message')
     })
 
     const store = createMockStore({
@@ -83,21 +101,61 @@ describe('SendConfirmation', () => {
       </Provider>
     )
 
-    // Initial render
-    expect(tree).toMatchSnapshot()
-
-    // TODO: figure out why fee line items arent rendering
-    // fireEvent.press(tree.getByText('feeEstimate'))
-    // Run timers, because Touchable adds some delay
-    // jest.runAllTimers()
-    // TODO: figure out why onPress function of Touchable isn't being called
-    // expect(tree.queryByText('securityFee')).not.toBeNull()
-    // expect(tree.queryByText('0.0100')).toBeNull()
+    store.clearActions()
 
     // Wait for fee error
     await waitForElement(() => tree.getByText('---'))
 
-    expect(tree).toMatchSnapshot()
+    expect(store.getActions()).toEqual([
+      {
+        action: null,
+        alertType: 'error',
+        buttonMessage: null,
+        dismissAfter: 5000,
+        displayMethod: ErrorDisplayType.BANNER,
+        message: 'calculateFeeFailed',
+        title: null,
+        type: 'ALERT/SHOW',
+        underlyingError: 'calculateFeeFailed',
+      },
+    ])
+  })
+
+  it('shows an `insufficientBalance` error when fee estimate fails due insufficient user balance', async () => {
+    mockedGetSendFee.mockImplementation(async () => {
+      throw new Error(ErrorMessages.INSUFFICIENT_BALANCE)
+    })
+
+    const store = createMockStore({
+      stableToken: {
+        balance: '0',
+      },
+    })
+
+    const tree = render(
+      <Provider store={store}>
+        <SendConfirmation {...mockScreenProps} />
+      </Provider>
+    )
+
+    store.clearActions()
+
+    // Wait for fee error
+    await waitForElement(() => tree.getByText('---'))
+
+    expect(store.getActions()).toEqual([
+      {
+        action: null,
+        alertType: 'error',
+        buttonMessage: null,
+        dismissAfter: 5000,
+        displayMethod: ErrorDisplayType.BANNER,
+        message: 'insufficientBalance',
+        title: null,
+        type: 'ALERT/SHOW',
+        underlyingError: 'insufficientBalance',
+      },
+    ])
   })
 
   it('renders correctly when there are multiple user addresses (should show edit button)', async () => {
@@ -182,6 +240,7 @@ describe('SendConfirmation', () => {
 
     fireEvent.press(tree.getByTestId('accountEditButton'))
     expect(navigate).toHaveBeenCalledWith(Screens.ValidateRecipientIntro, {
+      origin: SendOrigin.AppSendFlow,
       transactionData: mockTransactionData,
       addressValidationType: mockAddressValidationType,
     })
@@ -214,5 +273,43 @@ describe('SendConfirmation', () => {
     )
 
     expect(tree.queryByTestId('accountEditButton')).toBeNull()
+  })
+})
+
+describe('SendConfirmation with Komenci enabled', () => {
+  const komenciEnabled = features.KOMENCI
+
+  beforeAll(() => {
+    features.KOMENCI = true
+    jest.useRealTimers()
+  })
+
+  afterAll(() => {
+    features.KOMENCI = komenciEnabled
+  })
+
+  beforeEach(() => {
+    mockedGetSendFee.mockClear()
+  })
+
+  it('renders correct modal for invitations', async () => {
+    mockedGetSendFee.mockImplementation(async () => TEST_FEE)
+
+    const store = createMockStore({
+      stableToken: {
+        balance: '200',
+      },
+    })
+
+    const tree = render(
+      <Provider store={store}>
+        <SendConfirmation {...mockInviteScreenProps} />
+      </Provider>
+    )
+
+    expect(tree).toMatchSnapshot()
+    expect(tree.queryByTestId('InviteAndSendModal')?.props.isVisible).toBe(false)
+    fireEvent.press(tree.getByTestId('ConfirmButton'))
+    expect(tree.queryByTestId('InviteAndSendModal')?.props.isVisible).toBe(true)
   })
 })

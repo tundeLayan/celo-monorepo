@@ -3,8 +3,9 @@ import BigNumber from 'bignumber.js'
 import { call, put, select } from 'redux-saga/effects'
 import { showMessage } from 'src/alert/actions'
 import { TokenTransactionType } from 'src/apollo/types'
+import { openUrl } from 'src/app/actions'
 import { CURRENCIES, resolveCurrency } from 'src/geth/consts'
-import { addressToE164NumberSelector } from 'src/identity/reducer'
+import { addressToDisplayNameSelector, addressToE164NumberSelector } from 'src/identity/reducer'
 import {
   NotificationReceiveState,
   NotificationTypes,
@@ -60,6 +61,7 @@ function* handlePaymentReceived(
   if (notificationState !== NotificationReceiveState.APP_ALREADY_OPEN) {
     const recipientCache = yield select(recipientCacheSelector)
     const addressToE164Number = yield select(addressToE164NumberSelector)
+    const addressToDisplayName = yield select(addressToDisplayNameSelector)
     const address = transferNotification.sender.toLowerCase()
     const currency = resolveCurrency(transferNotification.currency)
 
@@ -75,7 +77,8 @@ function* handlePaymentReceived(
         comment: transferNotification.comment,
         recipient: getRecipientFromAddress(address, addressToE164Number, recipientCache),
         type: TokenTransactionType.Received,
-      }
+      },
+      addressToDisplayName
     )
   }
 }
@@ -84,12 +87,25 @@ export function* handleNotification(
   message: FirebaseMessagingTypes.RemoteMessage,
   notificationState: NotificationReceiveState
 ) {
+  // See if this is a notification with an open url or webview action (`ou` prop in the data)
+  const urlToOpen = message.data?.ou
+  const openExternal = message.data?.openExternal === 'true'
+  const openUrlAction = urlToOpen ? openUrl(urlToOpen, openExternal, true) : null
+
   if (notificationState === NotificationReceiveState.APP_ALREADY_OPEN) {
-    const title = message.notification?.title
+    const { title, body } = message.notification ?? {}
     if (title) {
-      yield put(showMessage(title))
+      yield put(showMessage(body || title, undefined, null, openUrlAction, body ? title : null))
+    }
+  } else {
+    // Notification was received while app wasn't already open (i.e. tapped to act on it)
+    // So directly handle the action if any
+    if (openUrlAction) {
+      yield put(openUrlAction)
+      return
     }
   }
+
   switch (message.data?.type) {
     case NotificationTypes.PAYMENT_REQUESTED:
       yield call(

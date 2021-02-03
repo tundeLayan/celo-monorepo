@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { FlatList, StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import i18n, { Namespaces } from 'src/i18n'
-import { headerWithCloseButton } from 'src/navigator/Headers.v2'
+import { headerWithCloseButton } from 'src/navigator/Headers'
 import { modalScreenOptions } from 'src/navigator/Navigator'
 import { Screens } from 'src/navigator/Screens'
 import { StackParamList } from 'src/navigator/types'
@@ -29,9 +29,8 @@ export default function SelectCountry({ navigation, route }: Props) {
   ])
 
   function onSelect(country: LocalizedCountry) {
-    navigation.navigate(Screens.NameAndNumber, {
+    navigation.navigate(Screens.VerificationEducationScreen, {
       selectedCountryCodeAlpha2: country.alpha2,
-      country: country.displayNameNoDiacritics,
     })
   }
 

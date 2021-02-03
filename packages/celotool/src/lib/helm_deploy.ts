@@ -2,12 +2,12 @@ import fs from 'fs'
 import { entries, range } from 'lodash'
 import sleep from 'sleep-promise'
 import { getEnodesWithExternalIPAddresses } from 'src/lib/geth'
-import { AzureClusterConfig } from './azure'
 import { getKubernetesClusterRegion, switchToClusterFromEnv } from './cluster'
-import { execCmd, execCmdWithExitOnFailure } from './cmd-utils'
+import { execCmd, execCmdWithExitOnFailure, outputIncludes } from './cmd-utils'
 import { EnvTypes, envVar, fetchEnv, fetchEnvOrFallback, isProduction } from './env-utils'
 import { ensureAuthenticatedGcloudAccount } from './gcloud_utils'
 import { generateGenesisFromEnv } from './generate_utils'
+import { BaseClusterConfig, CloudProvider } from './k8s-cluster/base'
 import { getStatefulSetReplicas, scaleResource } from './kubernetes'
 import { installPrometheusIfNotExists } from './prometheus'
 import {
@@ -15,7 +15,6 @@ import {
   getProxiesPerValidator,
   getProxyName
 } from './testnet-utils'
-import { outputIncludes } from './utils'
 
 const CLOUDSQL_SECRET_NAME = 'blockscout-cloudsql-credentials'
 const BACKUP_GCS_SECRET_NAME = 'backup-blockchain-credentials'
@@ -165,29 +164,30 @@ export function getServiceAccountName(prefix: string) {
   return `${prefix}-${fetchEnv(envVar.KUBERNETES_CLUSTER_NAME)}`.slice(0, 30)
 }
 
-export async function uploadStorageClass() {
-  // TODO: allow this to run from anywhere
-  await execCmdWithExitOnFailure(`kubectl apply -f ../helm-charts/testnet/ssdstorageclass.yaml`)
-}
-
-export async function redeployTiller() {
-  const tillerServiceAccountExists = await outputIncludes(
-    `kubectl get serviceaccounts --namespace=kube-system`,
-    `tiller`,
-    `Tiller service account exists, skipping creation`
+export async function installGCPSSDStorageClass() {
+  // A previous version installed this directly with `kubectl` instead of helm.
+  // To be backward compatible, we don't install the chart if the storage class
+  // already exists.
+  const storageClassExists = await outputIncludes(
+    `kubectl get storageclass`,
+    `ssd`,
+    `SSD StorageClass exists, skipping install`
   )
-  if (!tillerServiceAccountExists) {
+  if (!storageClassExists) {
+    const gcpSSDHelmChartPath = '../helm-charts/gcp-ssd'
     await execCmdWithExitOnFailure(
-      `kubectl create serviceaccount tiller --namespace=kube-system && kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller && helm init --service-account=tiller`
+      `helm upgrade -i gcp-ssd ${gcpSSDHelmChartPath}`
     )
-    await sleep(20000)
   }
 }
 
-export async function installCertManagerAndNginx() {
+export async function installCertManagerAndNginx(celoEnv: string, clusterConfig?: BaseClusterConfig) {
+  const nginxChartVersion = '3.9.0'
+  const nginxChartNamespace = 'default'
+
   // Cert Manager is the newer version of lego
   const certManagerExists = await outputIncludes(
-    `helm list`,
+    `helm list -n default`,
     `cert-manager-cluster-issuers`,
     `cert-manager-cluster-issuers exists, skipping install`
   )
@@ -195,13 +195,79 @@ export async function installCertManagerAndNginx() {
     await installCertManager()
   }
   const nginxIngressReleaseExists = await outputIncludes(
-    `helm list`,
+    `helm list -n default`,
     `nginx-ingress-release`,
     `nginx-ingress-release exists, skipping install`
   )
   if (!nginxIngressReleaseExists) {
-    await execCmdWithExitOnFailure(`helm install --name nginx-ingress-release stable/nginx-ingress`)
+    const valueFilePath = `/tmp/${celoEnv}-nginx-testnet-values.yaml`
+    await nginxHelmParameters(valueFilePath, celoEnv, clusterConfig)
+
+    await helmUpdateNginxRepo()
+    await execCmdWithExitOnFailure(`helm install \
+      -n ${nginxChartNamespace} \
+      --version ${nginxChartVersion} \
+      nginx-ingress-release ingress-nginx/ingress-nginx \
+      -f ${valueFilePath}
+    `)
   }
+}
+
+async function nginxHelmParameters(valueFilePath: string, celoEnv: string, clusterConfig?: BaseClusterConfig) {
+  const logFormat = `{"timestamp": "$time_iso8601", "requestID": "$req_id", "proxyUpstreamName":
+  "$proxy_upstream_name", "proxyAlternativeUpstreamName": "$proxy_alternative_upstream_name","upstreamStatus":
+  "$upstream_status", "upstreamAddr": "$upstream_addr","httpRequest":{"requestMethod":
+  "$request_method", "requestUrl": "$host$request_uri", "status": $status,"requestSize":
+  "$request_length", "responseSize": "$upstream_response_length", "userAgent":
+  "$http_user_agent", "remoteIp": "$remote_addr", "referer": "$http_referer",
+  "latency": "$upstream_response_time s", "protocol":"$server_protocol"}}`
+  let loadBalancerIP = ''
+  if (clusterConfig?.cloudProvider === CloudProvider.GCP) {
+    loadBalancerIP = await getOrCreateNginxStaticIp(celoEnv)
+  }
+
+  const valueFileContent = `
+controller:
+  autoscaling:
+    enabled: "true"
+    targetMemoryUtilizationPercentage: 85
+  config:
+    log-format-escape-json: "true"
+    log-format-upstream: '${logFormat}'
+  metrics:
+    enabled: "true"
+    service:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "10254"
+  service:
+    loadBalancerIP: ${loadBalancerIP}
+  resources:
+    requests:
+      cpu: 200m
+      memory: 400Mi
+`
+  fs.writeFileSync(valueFilePath, valueFileContent)
+}
+
+async function getOrCreateNginxStaticIp(celoEnv: string) {
+  const staticIpName = `${celoEnv}-nginx`
+  await registerIPAddress(staticIpName)
+  const staticIpAddress = await retrieveIPAddress(staticIpName)
+  console.info(staticIpAddress)
+  return staticIpAddress
+}
+
+export async function helmUpdateNginxRepo() {
+  await execCmdWithExitOnFailure(
+    `helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx`
+  )
+  await execCmdWithExitOnFailure(
+    `helm repo add stable https://charts.helm.sh/stable`
+  )
+  await execCmdWithExitOnFailure(
+    `helm repo update`
+  )
 }
 
 export async function installCertManager() {
@@ -215,22 +281,22 @@ export async function installCertManager() {
   await execCmdWithExitOnFailure(`helm dependency update ${clusterIssuersHelmChartPath}`)
   console.info('Installing cert-manager-cluster-issuers')
   await execCmdWithExitOnFailure(
-    `helm install --name cert-manager-cluster-issuers ${clusterIssuersHelmChartPath}`
+    `helm install cert-manager-cluster-issuers ${clusterIssuersHelmChartPath} -n default`
   )
 }
 
 export async function installAndEnableMetricsDeps(
   installPrometheus: boolean,
-  clusterConfig?: AzureClusterConfig
+  clusterConfig?: BaseClusterConfig
 ) {
   const kubeStateMetricsReleaseExists = await outputIncludes(
-    `helm list`,
+    `helm list -n default`,
     `kube-state-metrics`,
     `kube-state-metrics exists, skipping install`
   )
   if (!kubeStateMetricsReleaseExists) {
     await execCmdWithExitOnFailure(
-      `helm install --name kube-state-metrics stable/kube-state-metrics --set rbac.create=true`
+      `helm install kube-state-metrics stable/kube-state-metrics --set rbac.create=true -n default`
     )
   }
   if (installPrometheus) {
@@ -305,11 +371,11 @@ export async function resetCloudSQLInstance(instanceName: string) {
   await execCmdWithExitOnFailure(`gcloud sql databases create blockscout -i ${instanceName}`)
 }
 
-async function registerIPAddress(name: string) {
+export async function registerIPAddress(name: string, zone?: string) {
   console.info(`Registering IP address ${name}`)
   try {
     await execCmd(
-      `gcloud compute addresses create ${name} --region ${getKubernetesClusterRegion()}`
+      `gcloud compute addresses create ${name} --region ${getKubernetesClusterRegion(zone)}`
     )
   } catch (error) {
     if (!error.toString().includes('already exists')) {
@@ -319,11 +385,11 @@ async function registerIPAddress(name: string) {
   }
 }
 
-async function deleteIPAddress(name: string) {
+export async function deleteIPAddress(name: string, zone?: string) {
   console.info(`Deleting IP address ${name}`)
   try {
     await execCmd(
-      `gcloud compute addresses delete ${name} --region ${getKubernetesClusterRegion()} -q`
+      `gcloud compute addresses delete ${name} --region ${getKubernetesClusterRegion(zone)} -q`
     )
   } catch (error) {
     if (!error.toString().includes('was not found')) {
@@ -333,9 +399,9 @@ async function deleteIPAddress(name: string) {
   }
 }
 
-export async function retrieveIPAddress(name: string) {
+export async function retrieveIPAddress(name: string, zone?: string) {
   const [address] = await execCmdWithExitOnFailure(
-    `gcloud compute addresses describe ${name}  --region ${getKubernetesClusterRegion()} --format="value(address)"`
+    `gcloud compute addresses describe ${name}  --region ${getKubernetesClusterRegion(zone)} --format="value(address)"`
   )
   return address.replace(/\n*$/, '')
 }
@@ -537,7 +603,6 @@ export async function deleteStaticIPs(celoEnv: string) {
 }
 
 export async function deletePersistentVolumeClaims(celoEnv: string, componentLabels: string[]) {
-  console.info(`Deleting persistent volume claims for ${celoEnv}`)
   for (const component of componentLabels) {
     await deletePersistentVolumeClaimsCustomLabels(celoEnv, 'component', component)
   }
@@ -548,7 +613,7 @@ export async function deletePersistentVolumeClaimsCustomLabels(
   label: string,
   value: string
 ) {
-  console.info(`Deleting persistent volume claims for ${namespace}`)
+  console.info(`Deleting persistent volume claims for labels ${label}=${value} in namespace ${namespace}`)
   try {
     const [output] = await execCmd(
       `kubectl delete pvc --selector='${label}=${value}' --namespace ${namespace}`
@@ -679,6 +744,9 @@ async function helmParameters(celoEnv: string, useExistingGenesis: boolean) {
     `--set promtosd.export_interval=${fetchEnv('PROMTOSD_EXPORT_INTERVAL')}`,
     `--set geth.blocktime=${fetchEnv('BLOCK_TIME')}`,
     `--set geth.validators="${fetchEnv('VALIDATORS')}"`,
+    `--set geth.secondaries="${fetchEnvOrFallback('SECONDARIES', '0')}"`,
+    `--set geth.use_gstorage_data=${fetchEnvOrFallback("USE_GSTORAGE_DATA", "false")}`,
+    `--set geth.gstorage_data_bucket=${fetchEnvOrFallback("GSTORAGE_DATA_BUCKET", "")}`,
     `--set geth.istanbulrequesttimeout=${fetchEnvOrFallback(
       'ISTANBUL_REQUEST_TIMEOUT_MS',
       '3000'
@@ -723,13 +791,16 @@ export async function installGenericHelmChart(
   celoEnv: string,
   releaseName: string,
   chartDir: string,
-  parameters: string[]
+  parameters: string[],
+  buildDependencies: boolean = true
 ) {
-  await buildHelmChartDependencies(chartDir)
+  if (buildDependencies) {
+    await buildHelmChartDependencies(chartDir)
+  }
 
   console.info(`Installing helm release ${releaseName}`)
   await helmCommand(
-    `helm install ${chartDir} --name ${releaseName} --namespace ${celoEnv} ${parameters.join(' ')}`
+    `helm install ${releaseName} ${chartDir} --namespace ${celoEnv} ${parameters.join(' ')}`
   )
 }
 
@@ -752,10 +823,10 @@ export function isCelotoolVerbose() {
   return process.env.CELOTOOL_VERBOSE === 'true'
 }
 
-export async function removeGenericHelmChart(releaseName: string) {
-  console.info(`Deleting helm chart ${releaseName}`)
+export async function removeGenericHelmChart(releaseName: string, namespace: string) {
+  console.info(`Deleting helm chart ${releaseName} from namespace ${namespace}`)
   try {
-    await execCmd(`helm del --purge ${releaseName}`)
+    await execCmd(`helm uninstall --namespace ${namespace} ${releaseName}`)
   } catch (error) {
     console.error(error)
   }
@@ -851,14 +922,14 @@ async function getProxyStatefulsets(celoEnv: string) {
 }
 
 export async function removeHelmRelease(celoEnv: string) {
-  return removeGenericHelmChart(celoEnv)
+  return removeGenericHelmChart(celoEnv, celoEnv)
 }
 
 export function makeHelmParameters(map: { [key: string]: string }) {
   return entries(map).map(([key, value]) => `--set ${key}=${value}`)
 }
 
-function setHelmArray(paramName: string, arr: any[]) {
+export function setHelmArray(paramName: string, arr: any[]) {
   return arr.map((value, i) => `--set ${paramName}[${i}]="${value}"`)
 }
 
@@ -885,4 +956,15 @@ staticnodes:
   staticnodesBase64: ${Buffer.from(JSON.stringify(enodes)).toString('base64')}
 `
   fs.writeFileSync(valueFilePath, valueFileContent)
+}
+
+export async function checkHelmVersion() {
+  const requiredHelmVersion = 'v3'
+  const helmOK = await outputIncludes('helm version -c --short', requiredHelmVersion, `Checking local Helm version. Required ${requiredHelmVersion}`)
+  if (helmOK) {
+    return true
+  } else {
+    console.error(`Error checking local helm version. Helm version required ${requiredHelmVersion}`)
+    process.exit(1)
+  }
 }

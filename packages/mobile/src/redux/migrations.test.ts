@@ -90,4 +90,34 @@ describe('Redux persist migrations', () => {
     expect(migratedSchema.web3.dataEncryptionKey).toBe('key')
     expect(migratedSchema.web3.commentKey).toBe(undefined)
   })
+
+  it('works for v5 to v6', () => {
+    const v5Stub = {
+      invite: {
+        redeemComplete: false,
+      },
+      web3: {
+        account: 'some_account',
+      },
+    }
+    const migratedSchema = migrations[6](v5Stub)
+    expect(migratedSchema.invite.redeemComplete).toBe(true)
+  })
+
+  it('works for v6 to v7', () => {
+    const mockAddress = '0x00000000000000000000'
+    const mockName = 'Mock Name'
+
+    const v6Stub = {
+      identity: {
+        addressToDisplayName: {
+          [mockAddress]: mockName,
+        },
+      },
+    }
+    const migratedSchema = migrations[7](v6Stub)
+    expect(Object.keys(migratedSchema.identity.addressToDisplayName).length).toEqual(1)
+    expect(migratedSchema.identity.addressToDisplayName[mockAddress].name).toEqual(mockName)
+    expect(migratedSchema.identity.addressToDisplayName[mockAddress].imageUrl).toBeNull()
+  })
 })

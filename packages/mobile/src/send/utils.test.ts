@@ -1,8 +1,15 @@
+import BigNumber from 'bignumber.js'
 import { expectSaga } from 'redux-saga-test-plan'
 import * as matchers from 'redux-saga-test-plan/matchers'
+import { SendOrigin } from 'src/analytics/types'
+import { TokenTransactionType } from 'src/apollo/types'
 import { LocalCurrencyCode } from 'src/localCurrency/consts'
+import { fetchExchangeRate } from 'src/localCurrency/saga'
+import { navigate } from 'src/navigator/NavigationService'
+import { Screens } from 'src/navigator/Screens'
 import { UriData, urlFromUriData } from 'src/qrcode/schema'
 import { PaymentInfo } from 'src/send/reducers'
+import { TransactionDataInput } from 'src/send/SendAmount'
 import {
   dailyAmountRemaining,
   handlePaymentDeeplink,
@@ -11,6 +18,9 @@ import {
   handleSendPaymentData,
   _isPaymentLimitReached,
 } from 'src/send/utils'
+import { mockQRCodeRecipient, mockUriData } from 'test/values'
+
+const dailyLimit = 500
 
 describe('send/utils', () => {
   const HOURS = 3600 * 1000
@@ -19,28 +29,28 @@ describe('send/utils', () => {
       const now = Date.now()
       const newPayment = 10
       const recentPayments: PaymentInfo[] = []
-      expect(_isPaymentLimitReached(now, recentPayments, newPayment)).toBeFalsy()
+      expect(_isPaymentLimitReached(now, recentPayments, newPayment, dailyLimit)).toBeFalsy()
     })
 
     it('no recent payments, large transaction, fine', () => {
       const now = Date.now()
       const newPayment = 500
       const recentPayments: PaymentInfo[] = []
-      expect(_isPaymentLimitReached(now, recentPayments, newPayment)).toBeFalsy()
+      expect(_isPaymentLimitReached(now, recentPayments, newPayment, dailyLimit)).toBeFalsy()
     })
 
     it('no recent payments, too large transaction', () => {
       const now = Date.now()
       const newPayment = 501
       const recentPayments: PaymentInfo[] = []
-      expect(_isPaymentLimitReached(now, recentPayments, newPayment)).toBeTruthy()
+      expect(_isPaymentLimitReached(now, recentPayments, newPayment, dailyLimit)).toBeTruthy()
     })
 
     it('one recent payment, fine', () => {
       const now = Date.now()
       const newPayment = 10
       const recentPayments: PaymentInfo[] = [{ timestamp: now, amount: 10 }]
-      expect(_isPaymentLimitReached(now, recentPayments, newPayment)).toBeFalsy()
+      expect(_isPaymentLimitReached(now, recentPayments, newPayment, dailyLimit)).toBeFalsy()
     })
 
     it('multiple recent payments, fine', () => {
@@ -50,14 +60,14 @@ describe('send/utils', () => {
         { timestamp: now - 2 * HOURS, amount: 200 },
         { timestamp: now - 3 * HOURS, amount: 200 },
       ]
-      expect(_isPaymentLimitReached(now, recentPayments, newPayment)).toBeFalsy()
+      expect(_isPaymentLimitReached(now, recentPayments, newPayment, dailyLimit)).toBeFalsy()
     })
 
     it('one large recent payment, more than 24 hours ago, fine', () => {
       const now = Date.now()
       const newPayment = 10
       const recentPayments: PaymentInfo[] = [{ timestamp: now - 25 * HOURS, amount: 500 }]
-      expect(_isPaymentLimitReached(now, recentPayments, newPayment)).toBeFalsy()
+      expect(_isPaymentLimitReached(now, recentPayments, newPayment, dailyLimit)).toBeFalsy()
     })
 
     it('multiple recent payments, over limit, more than 24 hours ago, fine', () => {
@@ -67,7 +77,7 @@ describe('send/utils', () => {
         { timestamp: now - 48 * HOURS, amount: 300 },
         { timestamp: now - 24 * HOURS, amount: 300 },
       ]
-      expect(_isPaymentLimitReached(now, recentPayments, newPayment)).toBeFalsy()
+      expect(_isPaymentLimitReached(now, recentPayments, newPayment, dailyLimit)).toBeFalsy()
     })
 
     it('multiple recent payments, over limit', () => {
@@ -77,14 +87,14 @@ describe('send/utils', () => {
         { timestamp: now - 12 * HOURS, amount: 250 },
         { timestamp: now - 6 * HOURS, amount: 250 },
       ]
-      expect(_isPaymentLimitReached(now, recentPayments, newPayment)).toBeTruthy()
+      expect(_isPaymentLimitReached(now, recentPayments, newPayment, dailyLimit)).toBeTruthy()
     })
   })
   describe('dailyAmountRemaining', () => {
     it('returns difference between amount sent in last 24 hours and the Limit', () => {
       const now = Date.now()
       const recentPayments: PaymentInfo[] = [{ timestamp: now, amount: 10 }]
-      expect(dailyAmountRemaining(now, recentPayments)).toEqual(490)
+      expect(dailyAmountRemaining(now, recentPayments, dailyLimit)).toEqual(490)
     })
 
     it('returns 0 when limit has been reached', () => {
@@ -94,13 +104,13 @@ describe('send/utils', () => {
         { timestamp: now, amount: 200 },
         { timestamp: now, amount: 200 },
       ]
-      expect(dailyAmountRemaining(now, recentPayments)).toEqual(0)
+      expect(dailyAmountRemaining(now, recentPayments, dailyLimit)).toEqual(0)
     })
 
     it('works fine when no payments have been sent', () => {
       const now = Date.now()
       const recentPayments: PaymentInfo[] = []
-      expect(dailyAmountRemaining(now, recentPayments)).toEqual(500)
+      expect(dailyAmountRemaining(now, recentPayments, dailyLimit)).toEqual(500)
     })
 
     it('works fine when payments were sent but some more than 24 hours ago', () => {
@@ -109,7 +119,7 @@ describe('send/utils', () => {
         { timestamp: now - 48 * HOURS, amount: 300 },
         { timestamp: now - 16 * HOURS, amount: 300 },
       ]
-      expect(dailyAmountRemaining(now, recentPayments)).toEqual(200)
+      expect(dailyAmountRemaining(now, recentPayments, dailyLimit)).toEqual(200)
     })
   })
 
@@ -128,10 +138,97 @@ describe('send/utils', () => {
       const parsed: UriData = {
         ...data,
         e164PhoneNumber: undefined,
+        token: undefined,
       }
       await expectSaga(handlePaymentDeeplink, deeplink)
         .provide([[matchers.call.fn(handleSendPaymentData), parsed]])
         .run()
+    })
+
+    describe('deeplinks for sending cUSD', () => {
+      beforeEach(() => {
+        jest.clearAllMocks()
+      })
+
+      it('should navigate to SendAmount screen when address & currencyCode are given ', async () => {
+        await expectSaga(handleSendPaymentData, mockUriData[3])
+          .provide([[matchers.call.fn(fetchExchangeRate), mockUriData[3].currencyCode]])
+          .run()
+        expect(navigate).toHaveBeenCalledWith(Screens.SendAmount, {
+          origin: SendOrigin.AppSendFlow,
+          recipient: mockQRCodeRecipient,
+          isOutgoingPaymentRequest: undefined,
+        })
+      })
+
+      it('should navigate to SendConfirmation screen when address, currencyCode, & amount are given ', async () => {
+        const mockTransactionData: TransactionDataInput = {
+          recipient: mockQRCodeRecipient,
+          amount: new BigNumber('.5'),
+          reason: mockUriData[4].comment,
+          type: TokenTransactionType.PayPrefill,
+        }
+
+        await expectSaga(handleSendPaymentData, mockUriData[4])
+          .provide([[matchers.call.fn(fetchExchangeRate), '2']])
+          .run()
+        expect(navigate).toHaveBeenCalledWith(Screens.SendConfirmation, {
+          origin: SendOrigin.AppSendFlow,
+          transactionData: mockTransactionData,
+          currencyInfo: { localCurrencyCode: mockUriData[4].currencyCode, localExchangeRate: '2' },
+        })
+      })
+
+      it('should navigate to SendConfirmation screen when address, currencyCode, amount, & token = cUSD are given ', async () => {
+        const mockTransactionData: TransactionDataInput = {
+          recipient: mockQRCodeRecipient,
+          amount: new BigNumber('.5'),
+          reason: mockUriData[5].comment,
+          type: TokenTransactionType.PayPrefill,
+        }
+
+        await expectSaga(handleSendPaymentData, mockUriData[5])
+          .provide([[matchers.call.fn(fetchExchangeRate), '2']])
+          .run()
+        expect(navigate).toHaveBeenCalledWith(Screens.SendConfirmation, {
+          origin: SendOrigin.AppSendFlow,
+          transactionData: mockTransactionData,
+          currencyInfo: { localCurrencyCode: mockUriData[5].currencyCode, localExchangeRate: '2' },
+        })
+      })
+    })
+
+    describe('deeplinks for withdrawing CELO', () => {
+      beforeEach(() => {
+        jest.clearAllMocks()
+      })
+
+      it('should navigate to WithdrawCeloReview screen when address, token = CELO, currencyCode, and amount are given ', async () => {
+        await expectSaga(handleSendPaymentData, mockUriData[0])
+          .provide([[matchers.call.fn(fetchExchangeRate), mockUriData[0].currencyCode]])
+          .run()
+        expect(navigate).toHaveBeenCalledWith(Screens.WithdrawCeloReviewScreen, {
+          // @ts-ignore
+          amount: new BigNumber(mockUriData[0].amount.valueOf()),
+          recipientAddress: mockUriData[0].address.toLowerCase(),
+          feeEstimate: new BigNumber(0),
+          isCashOut: false,
+        })
+      })
+
+      it('should not navigate to WithdrawCeloReview screen when only address & token = CELO are given ', async () => {
+        await expectSaga(handleSendPaymentData, mockUriData[1])
+          .provide([[matchers.call.fn(fetchExchangeRate), mockUriData[1].currencyCode]])
+          .run()
+        expect(navigate).not.toHaveBeenCalled()
+      })
+
+      it('should not navigate to any screen when an unsupported token is given ', async () => {
+        await expectSaga(handleSendPaymentData, mockUriData[2])
+          .provide([[matchers.call.fn(fetchExchangeRate), mockUriData[2].currencyCode]])
+          .run()
+        expect(navigate).not.toHaveBeenCalled()
+      })
     })
   })
 })

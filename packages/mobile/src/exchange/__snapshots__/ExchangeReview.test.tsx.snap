@@ -127,7 +127,7 @@ exports[`ExchangeReview renders correctly 1`] = `
                     Array [
                       undefined,
                       Object {
-                        "color": undefined,
+                        "color": "#2E3338",
                       },
                     ]
                   }
@@ -157,7 +157,7 @@ exports[`ExchangeReview renders correctly 1`] = `
                   Array [
                     undefined,
                     Object {
-                      "color": undefined,
+                      "color": "#2E3338",
                     },
                   ]
                 }
@@ -175,6 +175,7 @@ exports[`ExchangeReview renders correctly 1`] = `
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackground",
+                  "rippleRadius": undefined,
                   "type": "ThemeAttrAndroid",
                 }
               }
@@ -197,10 +198,13 @@ exports[`ExchangeReview renders correctly 1`] = `
               >
                 <View
                   style={
-                    Object {
-                      "alignItems": "center",
-                      "flexDirection": "row",
-                    }
+                    Array [
+                      Object {
+                        "alignItems": "center",
+                        "flexDirection": "row",
+                      },
+                      undefined,
+                    ]
                   }
                 >
                   <Text
@@ -295,7 +299,7 @@ exports[`ExchangeReview renders correctly 1`] = `
                         Array [
                           undefined,
                           Object {
-                            "color": undefined,
+                            "color": "#2E3338",
                           },
                         ]
                       }
@@ -347,9 +351,9 @@ exports[`ExchangeReview renders correctly 1`] = `
                   Array [
                     Object {
                       "color": "#2E3338",
-                      "fontFamily": "Hind-Regular",
-                      "fontSize": 15,
-                      "lineHeight": 24,
+                      "fontFamily": "Inter-Regular",
+                      "fontSize": 16,
+                      "lineHeight": 22,
                     },
                     Object {
                       "color": "#2E3338",
@@ -368,9 +372,9 @@ exports[`ExchangeReview renders correctly 1`] = `
                 Array [
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 15,
-                    "lineHeight": 24,
+                    "fontFamily": "Inter-Regular",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   },
                   Object {
                     "color": "#2E3338",
@@ -387,7 +391,7 @@ exports[`ExchangeReview renders correctly 1`] = `
                   Array [
                     undefined,
                     Object {
-                      "color": undefined,
+                      "color": "#2E3338",
                     },
                   ]
                 }
@@ -426,17 +430,20 @@ exports[`ExchangeReview renders correctly 1`] = `
                   Array [
                     Object {
                       "color": "#2E3338",
-                      "fontFamily": "Hind-Regular",
-                      "fontSize": 15,
-                      "lineHeight": 24,
+                      "fontFamily": "Inter-Regular",
+                      "fontSize": 16,
+                      "lineHeight": 22,
                     },
                     Object {
-                      "color": "#81868B",
+                      "color": "#9CA4A9",
+                      "fontFamily": "Inter-Regular",
+                      "fontSize": 14,
+                      "lineHeight": 18,
                     },
                   ]
                 }
               >
-                Celo Dollars (@
+                Celo Dollars @
                  
                 <Text
                   numberOfLines={1}
@@ -444,7 +451,7 @@ exports[`ExchangeReview renders correctly 1`] = `
                     Array [
                       undefined,
                       Object {
-                        "color": undefined,
+                        "color": "#2E3338",
                       },
                     ]
                   }
@@ -453,7 +460,6 @@ exports[`ExchangeReview renders correctly 1`] = `
                   $
                   0.75
                 </Text>
-                )
               </Text>
             </View>
             <Text
@@ -461,12 +467,15 @@ exports[`ExchangeReview renders correctly 1`] = `
                 Array [
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 15,
-                    "lineHeight": 24,
+                    "fontFamily": "Inter-Regular",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   },
                   Object {
-                    "color": "#81868B",
+                    "color": "#9CA4A9",
+                    "fontFamily": "Inter-Regular",
+                    "fontSize": 14,
+                    "lineHeight": 18,
                   },
                 ]
               }
@@ -477,7 +486,7 @@ exports[`ExchangeReview renders correctly 1`] = `
                   Array [
                     undefined,
                     Object {
-                      "color": undefined,
+                      "color": "#2E3338",
                     },
                   ]
                 }
@@ -521,6 +530,7 @@ exports[`ExchangeReview renders correctly 1`] = `
         nativeBackgroundAndroid={
           Object {
             "attribute": "selectableItemBackground",
+            "rippleRadius": undefined,
             "type": "ThemeAttrAndroid",
           }
         }
@@ -543,6 +553,7 @@ exports[`ExchangeReview renders correctly 1`] = `
             "paddingVertical": 5,
           }
         }
+        testID="ConfirmExchange"
       >
         <Text
           style={
@@ -561,7 +572,7 @@ exports[`ExchangeReview renders correctly 1`] = `
               Array [
                 undefined,
                 Object {
-                  "color": undefined,
+                  "color": "#2E3338",
                 },
               ]
             }

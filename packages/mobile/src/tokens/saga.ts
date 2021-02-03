@@ -1,12 +1,14 @@
-import { CeloContract, CeloTransactionObject } from '@celo/contractkit'
+import { CeloTransactionObject } from '@celo/connect'
+import { CeloContract } from '@celo/contractkit'
 import { retryAsync } from '@celo/utils/src/async'
 import BigNumber from 'bignumber.js'
 import { call, put, take, takeEvery } from 'redux-saga/effects'
-import { showError } from 'src/alert/actions'
+import { showErrorOrFallback } from 'src/alert/actions'
 import { AppEvents } from 'src/analytics/Events'
 import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
 import { TokenTransactionType } from 'src/apollo/types'
 import { ErrorMessages } from 'src/app/ErrorMessages'
+import { WALLET_BALANCE_UPPER_BOUND } from 'src/config'
 import { CURRENCY_ENUM } from 'src/geth/consts'
 import { addStandbyTransaction, removeStandbyTransaction } from 'src/transactions/actions'
 import { sendAndMonitorTransaction } from 'src/transactions/saga'
@@ -47,7 +49,7 @@ export function* convertToContractDecimals(value: BigNumber, token: CURRENCY_ENU
 
 export async function getTokenContract(token: CURRENCY_ENUM) {
   Logger.debug(TAG + '@getTokenContract', `Fetching contract for ${token}`)
-  const contractKit = await getContractKitAsync()
+  const contractKit = await getContractKitAsync(false)
   switch (token) {
     case CURRENCY_ENUM.GOLD:
       return contractKit.contracts.getGoldToken()
@@ -68,20 +70,25 @@ interface TokenFetchFactory {
 export function tokenFetchFactory({ actionName, token, actionCreator, tag }: TokenFetchFactory) {
   function* tokenFetch() {
     try {
-      Logger.debug(tag, 'Fetching balance')
+      Logger.debug(tag, `Fetching ${token} balance`)
       const account = yield call(getConnectedAccount)
       const tokenContract = yield call(getTokenContract, token)
       const balanceInWei: BigNumber = yield call([tokenContract, tokenContract.balanceOf], account)
       const balance: BigNumber = yield call(convertFromContractDecimals, balanceInWei, token)
-      ValoraAnalytics.track(
-        AppEvents.fetch_balance,
+      const balanceLogObject =
         token === CURRENCY_ENUM.DOLLAR
           ? {
               dollarBalance: balance.toString(),
             }
           : { goldBalance: balance.toString() }
-      )
-      yield put(actionCreator(balance.toString()))
+
+      // Only update balances when it's less than the upper bound
+      if (balance.lt(WALLET_BALANCE_UPPER_BOUND)) {
+        yield put(actionCreator(balance.toString()))
+        ValoraAnalytics.track(AppEvents.fetch_balance, balanceLogObject)
+      } else {
+        ValoraAnalytics.track(AppEvents.fetch_balance_error, balanceLogObject)
+      }
     } catch (error) {
       Logger.error(tag, 'Error fetching balance', error)
     }
@@ -198,18 +205,14 @@ export function tokenTransferFactory({
       } catch (error) {
         Logger.error(tag, 'Error transfering token', error)
         yield put(removeStandbyTransaction(context.id))
-        if (error.message === ErrorMessages.INCORRECT_PIN) {
-          yield put(showError(ErrorMessages.INCORRECT_PIN))
-        } else {
-          yield put(showError(ErrorMessages.TRANSACTION_FAILED))
-        }
+        yield put(showErrorOrFallback(error, ErrorMessages.TRANSACTION_FAILED))
       }
     }
   }
 }
 
 export async function getCurrencyAddress(currency: CURRENCY_ENUM) {
-  const contractKit = await getContractKitAsync()
+  const contractKit = await getContractKitAsync(false)
   switch (currency) {
     case CURRENCY_ENUM.GOLD:
       return contractKit.registry.addressFor(CeloContract.GoldToken)

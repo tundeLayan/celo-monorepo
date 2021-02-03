@@ -11,6 +11,7 @@ import { StyleSheet, View } from 'react-native'
 import { connect } from 'react-redux'
 import { hideAlert, showError } from 'src/alert/actions'
 import { RequestEvents, SendEvents } from 'src/analytics/Events'
+import { SendOrigin } from 'src/analytics/types'
 import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
 import { ErrorMessages } from 'src/app/ErrorMessages'
 import { verificationPossibleSelector } from 'src/app/selectors'
@@ -19,10 +20,10 @@ import i18n, { Namespaces, withTranslation } from 'src/i18n'
 import ContactPermission from 'src/icons/ContactPermission'
 import { importContacts } from 'src/identity/actions'
 import { ContactMatches } from 'src/identity/types'
-import { emptyHeader } from 'src/navigator/Headers.v2'
+import { emptyHeader } from 'src/navigator/Headers'
 import { navigate, navigateBack } from 'src/navigator/NavigationService'
 import { Screens } from 'src/navigator/Screens'
-import { TopBarIconButton } from 'src/navigator/TopBarButton.v2'
+import { TopBarIconButton } from 'src/navigator/TopBarButton'
 import { StackParamList } from 'src/navigator/types'
 import {
   filterRecipientFactory,
@@ -245,7 +246,11 @@ class Send extends React.Component<Props, State> {
       }
     )
 
-    navigate(Screens.SendAmount, { recipient, isOutgoingPaymentRequest })
+    navigate(Screens.SendAmount, {
+      recipient,
+      isOutgoingPaymentRequest,
+      origin: SendOrigin.AppSendFlow,
+    })
   }
 
   onPressStartVerification = () => {

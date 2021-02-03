@@ -1,14 +1,14 @@
-import Button, { BtnTypes } from '@celo/react-components/components/Button.v2'
+import Button, { BtnTypes } from '@celo/react-components/components/Button'
 import KeyboardAwareScrollView from '@celo/react-components/components/KeyboardAwareScrollView'
 import KeyboardSpacer from '@celo/react-components/components/KeyboardSpacer'
 import colors from '@celo/react-components/styles/colors'
-import fontStyles from '@celo/react-components/styles/fonts.v2'
+import fontStyles from '@celo/react-components/styles/fonts'
 import { CURRENCIES, CURRENCY_ENUM } from '@celo/utils/src'
 import { HeaderHeightContext, StackScreenProps } from '@react-navigation/stack'
 import BigNumber from 'bignumber.js'
 import * as React from 'react'
 import { Trans, WithTranslation } from 'react-i18next'
-import { Keyboard, StyleSheet, Text, View } from 'react-native'
+import { Dimensions, Keyboard, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context'
 import { connect } from 'react-redux'
 import { hideAlert } from 'src/alert/actions'
@@ -24,7 +24,7 @@ import CurrencyDisplay from 'src/components/CurrencyDisplay'
 import Dialog from 'src/components/Dialog'
 import i18n, { Namespaces, withTranslation } from 'src/i18n'
 import { importBackupPhrase } from 'src/import/actions'
-import { HeaderTitleWithSubtitle, nuxNavigationOptions } from 'src/navigator/Headers.v2'
+import { HeaderTitleWithSubtitle, nuxNavigationOptions } from 'src/navigator/Headers'
 import { navigate } from 'src/navigator/NavigationService'
 import { Screens } from 'src/navigator/Screens'
 import { StackParamList } from 'src/navigator/types'
@@ -32,6 +32,11 @@ import TopBarTextButtonOnboarding from 'src/onboarding/TopBarTextButtonOnboardin
 import UseBackToWelcomeScreen from 'src/onboarding/UseBackToWelcomeScreen'
 import { RootState } from 'src/redux/reducers'
 import { isAppConnected } from 'src/redux/selectors'
+
+const AVERAGE_WORD_WIDTH = 80
+const AVERAGE_SEED_WIDTH = AVERAGE_WORD_WIDTH * 24
+// Estimated number of lines needed to enter the account key
+const NUMBER_OF_LINES = Math.ceil(AVERAGE_SEED_WIDTH / Dimensions.get('window').width)
 
 interface State {
   keyboardVisible: boolean
@@ -172,6 +177,7 @@ export class ImportWallet extends React.Component<Props, State> {
                     inputValue={backupPhrase}
                     inputPlaceholder={t('importExistingKey.keyPlaceholder')}
                     multiline={true}
+                    numberOfLines={NUMBER_OF_LINES}
                     onInputChange={this.setBackupPhrase}
                     shouldShowClipboard={this.shouldShowClipboard}
                     testID="ImportWalletBackupKeyInputField"
@@ -225,18 +231,8 @@ const styles = StyleSheet.create({
   scrollContainer: {
     padding: 16,
   },
-  logo: {
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  loadingSpinnerContainer: {
-    marginVertical: 20,
-  },
   button: {
     paddingVertical: 16,
-  },
-  wordsInput: {
-    minHeight: 80,
   },
   explanation: {
     ...fontStyles.regular,

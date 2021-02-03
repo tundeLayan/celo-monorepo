@@ -21,7 +21,7 @@ echo $mobile_root
 cd "$mobile_root"
 
 # Please update the sha when valora branding updates are needed
-valora_branding_sha=b046284
+valora_branding_sha=fd0bcfb
 
 if [[ "$branding" == "valora" ]]; then
   # prevents git from asking credentials
@@ -29,7 +29,7 @@ if [[ "$branding" == "valora" ]]; then
   if [[ ! -e branding/valora ]] && ! git clone git@github.com:clabs-co/valora-app-branding.git branding/valora ; then
     echo "Couldn't clone private branding. Will use default branding."
     branding=celo
-  else 
+  else
     pushd "branding/$branding"
     git fetch
     git checkout "$valora_branding_sha"
@@ -39,7 +39,7 @@ fi
 
 echo "Using branding/$branding"
 
-rsync -avyz --exclude '.git' "$mobile_root/branding/$branding/" "$mobile_root"
+rsync -avyz --exclude '.git' --exclude '.gitignore' "$mobile_root/branding/$branding/" "$mobile_root"
 
 # Now clean up branded files which have been deleted
 # This is needed when switching branding, so we don't leave files
@@ -67,6 +67,6 @@ to_delete=$(comm -23 \
 )
 
 for old_file in $to_delete; do
-  echo "Deleting: $old_file" 
+  echo "Deleting: $old_file"
   rm -f "$old_file"
 done

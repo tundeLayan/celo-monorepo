@@ -1,11 +1,16 @@
 import gql from 'graphql-tag'
-import * as React from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSelector } from 'react-redux'
 import { HomeEvents } from 'src/analytics/Events'
 import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
 import { TokenTransactionType, TransferItemFragment } from 'src/apollo/types'
 import { Namespaces } from 'src/i18n'
-import { AddressToE164NumberType } from 'src/identity/reducer'
+import {
+  addressToDisplayNameSelector,
+  AddressToDisplayNameType,
+  AddressToE164NumberType,
+} from 'src/identity/reducer'
 import { InviteDetails } from 'src/invite/actions'
 import { getRecipientFromAddress, NumberToRecipient } from 'src/recipients/recipient'
 import { navigateToPaymentTransferReview } from 'src/transactions/actions'
@@ -36,7 +41,8 @@ function navigateToTransactionReview({
   amount,
   addressToE164Number,
   recipientCache,
-}: Props) {
+  addressToDisplayName,
+}: Props & { addressToDisplayName: AddressToDisplayNameType }) {
   // TODO: remove this when verification reward drilldown is supported
   if (type === TokenTransactionType.VerificationReward) {
     return
@@ -45,22 +51,28 @@ function navigateToTransactionReview({
   const recipient = getRecipientFromAddress(address, addressToE164Number, recipientCache)
   const e164PhoneNumber = addressToE164Number[address] || undefined
 
-  navigateToPaymentTransferReview(type, timestamp, {
-    address,
-    comment: getDecryptedTransferFeedComment(comment, commentKey, type),
-    amount,
-    recipient,
+  navigateToPaymentTransferReview(
     type,
-    e164PhoneNumber,
-    // fee TODO: add fee here.
-  })
+    timestamp,
+    {
+      address,
+      comment: getDecryptedTransferFeedComment(comment, commentKey, type),
+      amount,
+      recipient,
+      type,
+      e164PhoneNumber,
+      // fee TODO: add fee here.
+    },
+    addressToDisplayName
+  )
 }
 
 export function TransferFeedItem(props: Props) {
   const { t } = useTranslation(Namespaces.walletFlow5)
+  const addressToDisplayName = useSelector(addressToDisplayNameSelector)
 
   const onPress = () => {
-    navigateToTransactionReview(props)
+    navigateToTransactionReview({ ...props, addressToDisplayName })
     ValoraAnalytics.track(HomeEvents.transaction_feed_item_select)
   }
 
@@ -85,11 +97,13 @@ export function TransferFeedItem(props: Props) {
     recentTxRecipientsCache,
     address,
     addressToE164Number,
+    addressToDisplayName,
     comment,
     commentKey,
     timestamp,
     invitees
   )
+  const imageUrl = addressToDisplayName[address]?.imageUrl ?? null
 
   return (
     <TransactionFeedItem
@@ -97,7 +111,9 @@ export function TransferFeedItem(props: Props) {
       amount={amount}
       title={title}
       info={info}
-      icon={<TransferFeedIcon type={type} recipient={recipient} address={address} />}
+      icon={
+        <TransferFeedIcon type={type} recipient={recipient} address={address} imageUrl={imageUrl} />
+      }
       timestamp={timestamp}
       status={status}
       onPress={onPress}

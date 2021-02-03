@@ -1,8 +1,6 @@
 // tslint:disable:no-console
-// tslint:disable-next-line:no-reference (Required to make this work w/ ts-node)
-/// <reference path="../../../contractkit/types/web3-celo.d.ts" />
-import { CeloContract, ContractKit, newKit } from '@celo/contractkit'
-import { TransactionResult } from '@celo/contractkit/lib/utils/tx-result'
+import { CeloTxReceipt, TransactionResult } from '@celo/connect'
+import { CeloContract, ContractKit, newKitFromWeb3 } from '@celo/contractkit'
 import { GoldTokenWrapper } from '@celo/contractkit/lib/wrappers/GoldTokenWrapper'
 import { StableTokenWrapper } from '@celo/contractkit/lib/wrappers/StableTokenWrapper'
 import { waitForPortOpen } from '@celo/dev-utils/lib/network'
@@ -14,7 +12,6 @@ import fetch from 'node-fetch'
 import path from 'path'
 import sleep from 'sleep-promise'
 import Web3 from 'web3'
-import { TransactionReceipt } from 'web3-core'
 import { Admin } from 'web3-eth-admin'
 import { spawnCmd, spawnCmdWithExitOnFailure } from './cmd-utils'
 import { convertToContractDecimals } from './contract-utils'
@@ -189,7 +186,7 @@ export const checkGethStarted = (dataDir: string) => {
 }
 
 export const getWeb3AndTokensContracts = async () => {
-  const kit = newKit('http://localhost:8545')
+  const kit = newKitFromWeb3(new Web3('http://localhost:8545'))
   const [goldToken, stableToken] = await Promise.all([
     kit.contracts.getGoldToken(),
     kit.contracts.getStableToken(),
@@ -221,15 +218,7 @@ const validateGethRPC = async (
   from: string,
   handleError: HandleErrorCallback
 ) => {
-  const transaction = await kit.web3.eth.getTransaction(txHash)
-  handleError(!transaction || !transaction.from, {
-    location: '[GethRPC]',
-    error: `Contractkit did not return a valid transaction`,
-  })
-  console.log(`jcortejoso transaction: ${transaction}`)
-  if (transaction == null) {
-    return
-  }
+  const transaction = await kit.connection.getTransaction(txHash)
   const txFrom = transaction.from.toLowerCase()
   const expectedFrom = from.toLowerCase()
   handleError(!transaction.from || expectedFrom !== txFrom, {
@@ -504,10 +493,9 @@ export const simulateClient = async (
   blockscoutUrl: string,
   blockscoutMeasurePercent: number, // percent of time in range [0, 100] to measure blockscout for a tx
   index: number,
-  web3Provider: string = 'http://localhost:8545'
 ) => {
   // Assume the node is accessible via localhost with senderAddress unlocked
-  const kit = newKit(web3Provider)
+  const kit = newKitFromWeb3(new Web3('http://localhost:8545'))
   kit.defaultAccount = senderAddress
   const gasPriceFixed = 101000000
 
@@ -674,11 +662,11 @@ export const transferERC20Token = async (
   password: string,
   txParams: any = {},
   onTransactionHash?: (hash: string) => void,
-  onReceipt?: (receipt: TransactionReceipt) => void,
+  onReceipt?: (receipt: CeloTxReceipt) => void,
   onError?: (error: any) => void
 ) => {
   txParams.from = from
-  await unlockAccount(kit.web3, 0, password, from)
+  await unlockAccount(kit.connection.web3, 0, password, from)
 
   const convertedAmount = await convertToContractDecimals(amount, token)
 
@@ -808,7 +796,9 @@ export async function importPrivateKey(
   verbose: boolean
 ) {
   const keyFile = path.join(getDatadir(getConfig.runPath, instance), 'key.txt')
-
+  if (!instance.privateKey) {
+    throw new Error('Unexpected empty private key')
+  }
   fs.writeFileSync(keyFile, instance.privateKey, { flag: 'a' })
 
   if (verbose) {
@@ -909,6 +899,7 @@ export async function startGeth(
     rpcport,
     wsport,
     validating,
+    replica,
     validatingGasPrice,
     bootnodeEnode,
     isProxy,
@@ -921,17 +912,13 @@ export async function startGeth(
 
   const privateKey = instance.privateKey || ''
   const lightserv = instance.lightserv || false
-  const etherbase = instance.etherbase || ''
-  const verbosity = gethConfig.verbosity ? gethConfig.verbosity : '3'
-  let blocktime: number = 1
-
-  if (
-    gethConfig.genesisConfig &&
-    gethConfig.genesisConfig.blockTime !== undefined &&
-    gethConfig.genesisConfig.blockTime >= 0
-  ) {
-    blocktime = gethConfig.genesisConfig.blockTime
+  const minerValidator = instance.minerValidator
+  if (instance.validating && !minerValidator) {
+    throw new Error('miner.validator address from the instance is required')
   }
+  // TODO(ponti): add flag after Donut fork
+  // const txFeeRecipient = instance.txFeeRecipient || minerValidator
+  const verbosity = gethConfig.verbosity ? gethConfig.verbosity : '3'
 
   const gethArgs = [
     '--datadir',
@@ -953,7 +940,17 @@ export async function startGeth(
     '--gcmode=archive', // Needed to retrieve historical state
     '--istanbul.blockperiod',
     blocktime.toString(),
-    ]
+  ]
+
+  if (minerValidator) {
+    gethArgs.push(
+      '--etherbase', // TODO(ponti): change to '--miner.validator' after deprecating the 'etherbase' flag
+      minerValidator
+    )
+    // TODO(ponti): add flag after Donut fork
+    // '--tx-fee-recipient',
+    // txFeeRecipient
+  }
 
   if (rpcport) {
     gethArgs.push(
@@ -975,10 +972,6 @@ export async function startGeth(
     )
   }
 
-  if (etherbase) {
-    gethArgs.push('--etherbase', etherbase)
-  }
-
   if (lightserv) {
     gethArgs.push('--light.serve=90')
     gethArgs.push('--light.maxpeers=10')
@@ -991,7 +984,10 @@ export async function startGeth(
   }
 
   if (validating) {
-    gethArgs.push('--mine', '--minerthreads=10', `--nodekeyhex=${privateKey}`)
+    gethArgs.push('--mine', '--minerthreads=10')
+    if (!replica) {
+      gethArgs.push(`--nodekeyhex=${privateKey}`)
+    }
 
     if (validatingGasPrice) {
       gethArgs.push(`--miner.gasprice=${validatingGasPrice}`)
@@ -1000,13 +996,16 @@ export async function startGeth(
     if (isProxied) {
       gethArgs.push('--proxy.proxied')
     }
+    if (replica) {
+      gethArgs.push('--istanbul.replica')
+    }
   } else if (isProxy) {
     gethArgs.push('--proxy.proxy')
     if (proxyport) {
       gethArgs.push(`--proxy.internalendpoint=:${proxyport.toString()}`)
     }
     gethArgs.push(`--proxy.proxiedvalidatoraddress=${instance.proxiedValidatorAddress}`)
-    // gethArgs.push(`--nodekeyhex=${privateKey}`)
+    gethArgs.push(`--nodekeyhex=${privateKey}`)
   }
 
   if (bootnodeEnode) {
@@ -1019,7 +1018,7 @@ export async function startGeth(
     if (proxyAllowPrivateIp) {
       gethArgs.push('--proxy.allowprivateip=true')
     }
-    gethArgs.push(`--proxy.proxyenodeurlpair=${instance.proxies[0]!};${instance.proxies[1]!}`)
+    gethArgs.push(`--proxy.proxyenodeurlpairs=${instance.proxies[0]!};${instance.proxies[1]!}`)
   }
 
   if (privateKey || ethstats) {
@@ -1077,8 +1076,9 @@ export async function startGeth(
 export function writeGenesis(gethConfig: GethRunConfig, validators: Validator[], verbose: boolean) {
   const genesis: string = generateGenesis({
     validators,
+    blockTime: 1,
     epoch: 10,
-    lookbackwindow: 2,
+    lookbackwindow: 3,
     requestTimeout: 3000,
     chainId: gethConfig.networkId,
     ...gethConfig.genesisConfig,
@@ -1205,7 +1205,7 @@ export async function connectPeers(instances: GethInstanceConfig[], verbose: boo
 // Add validator 0 as a peer of each other validator.
 export async function connectValidatorPeers(instances: GethInstanceConfig[]) {
   await connectPeers(
-    instances.filter(({ wsport, rpcport, validating }) => validating && (wsport || rpcport))
+    instances.filter(({ wsport, rpcport, validating, isProxy, isProxied }) => ((validating && !isProxied) || isProxy)  && (wsport || rpcport))
   )
 }
 
@@ -1231,6 +1231,9 @@ export async function migrateContracts(
         validatorKeys: validatorPrivateKeys.map(ensure0x),
         attestationKeys: attestationKeys.map(ensure0x),
       },
+      blockchainParameters: {
+        uptimeLookbackWindow: 3, // same as our default in `writeGenesis()`
+      },      
     },
     overrides
   )

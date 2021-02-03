@@ -1,14 +1,15 @@
-import SectionHeadNew from '@celo/react-components/components/SectionHeadNew'
+import SectionHead from '@celo/react-components/components/SectionHead'
 import {
   SettingsExpandedItem,
   SettingsItemSwitch,
   SettingsItemTextValue,
 } from '@celo/react-components/components/SettingsItem'
 import colors from '@celo/react-components/styles/colors'
-import fontStyles from '@celo/react-components/styles/fonts.v2'
+import fontStyles from '@celo/react-components/styles/fonts'
 import { isE164Number } from '@celo/utils/src/phoneNumbers'
 import { StackScreenProps } from '@react-navigation/stack'
 import * as Sentry from '@sentry/react-native'
+import locales from 'locales'
 import * as React from 'react'
 import { WithTranslation } from 'react-i18next'
 import {
@@ -36,7 +37,7 @@ import {
 import { sessionIdSelector, verificationPossibleSelector } from 'src/app/selectors'
 import Dialog from 'src/components/Dialog'
 import SessionId from 'src/components/SessionId'
-import { AVAILABLE_LANGUAGES, TOS_LINK } from 'src/config'
+import { TOS_LINK } from 'src/config'
 import { Namespaces, withTranslation } from 'src/i18n'
 import { revokeVerification } from 'src/identity/actions'
 import { LocalCurrencyCode } from 'src/localCurrency/consts'
@@ -118,6 +119,7 @@ const mapDispatchToProps = {
 interface State {
   fornoSwitchOffWarning: boolean
   showAccountKeyModal: boolean
+  showRevokeModal: boolean
 }
 
 export class Account extends React.Component<Props, State> {
@@ -167,6 +169,7 @@ export class Account extends React.Component<Props, State> {
   }
 
   revokeNumberVerification = () => {
+    this.hideConfirmRevokeModal()
     if (this.props.e164PhoneNumber && !isE164Number(this.props.e164PhoneNumber)) {
       Logger.showError('Cannot revoke verificaton: number invalid')
       return
@@ -205,7 +208,7 @@ export class Account extends React.Component<Props, State> {
             </TouchableOpacity>
           </View>
           <View style={styles.devSettingsItem}>
-            <TouchableOpacity onPress={this.revokeNumberVerification}>
+            <TouchableOpacity onPress={this.showConfirmRevokeModal}>
               <Text>Revoke Number Verification</Text>
             </TouchableOpacity>
           </View>
@@ -309,11 +312,19 @@ export class Account extends React.Component<Props, State> {
     this.props.clearStoredAccount(this.props.account || '')
   }
 
+  showConfirmRevokeModal = () => {
+    this.setState({ showRevokeModal: true })
+  }
+
+  hideConfirmRevokeModal = () => {
+    this.setState({ showRevokeModal: false })
+  }
+
   render() {
     const { t, i18n, numberVerified, verificationPossible } = this.props
     const promptFornoModal = this.props.route.params?.promptFornoModal ?? false
     const promptConfirmRemovalModal = this.props.route.params?.promptConfirmRemovalModal ?? false
-    const currentLanguage = AVAILABLE_LANGUAGES.find((l) => l.code === i18n.language)
+    const currentLanguage = locales[i18n.language]
     return (
       <SafeAreaView style={styles.container}>
         <DrawerTopBar />
@@ -338,7 +349,7 @@ export class Account extends React.Component<Props, State> {
               value={this.props.preferredCurrencyCode}
               onPress={this.goToLocalCurrencySetting}
             />
-            <SectionHeadNew text={t('securityAndData')} style={styles.sectionTitle} />
+            <SectionHead text={t('securityAndData')} style={styles.sectionTitle} />
             <SettingsItemSwitch
               title={t('requirePinOnAppOpen')}
               value={this.props.requirePinOnAppOpen}
@@ -356,10 +367,10 @@ export class Account extends React.Component<Props, State> {
               onValueChange={this.props.setAnalyticsEnabled}
               details={t('shareAnalytics_detail')}
             />
-            <SectionHeadNew text={t('legal')} style={styles.sectionTitle} />
+            <SectionHead text={t('legal')} style={styles.sectionTitle} />
             <SettingsItemTextValue title={t('licenses')} onPress={this.goToLicenses} />
             <SettingsItemTextValue title={t('termsOfServiceLink')} onPress={this.onTermsPress} />
-            <SectionHeadNew text={''} style={styles.sectionTitle} />
+            <SectionHead text={''} style={styles.sectionTitle} />
             <SettingsExpandedItem
               title={t('removeAccountTitle')}
               details={t('removeAccountDetails')}
@@ -411,6 +422,17 @@ export class Account extends React.Component<Props, State> {
             testID="ConfirmAccountRemovalModal"
           >
             {t('promptConfirmRemovalModal.body')}
+          </Dialog>
+          <Dialog
+            isVisible={this.state?.showRevokeModal}
+            title={t('promptConfirmRevokeModal.header')}
+            actionText={t('promptConfirmRevokeModal.revoke')}
+            actionPress={this.revokeNumberVerification}
+            secondaryActionText={t('global:cancel')}
+            secondaryActionPress={this.hideConfirmRevokeModal}
+            testID="ConfirmAccountRevokeModal"
+          >
+            {t('promptConfirmRevokeModal.body')}
           </Dialog>
         </ScrollView>
       </SafeAreaView>

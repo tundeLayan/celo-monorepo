@@ -15,6 +15,7 @@ import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
 import DevSkipButton from 'src/components/DevSkipButton'
 import { Namespaces, withTranslation } from 'src/i18n'
 import { nuxNavigationOptions } from 'src/navigator/Headers'
+import { navigate, navigateClearingStack } from 'src/navigator/NavigationService'
 import { Screens } from 'src/navigator/Screens'
 import { StackParamList } from 'src/navigator/types'
 import { DEFAULT_CACHE_ACCOUNT, isPinValid } from 'src/pincode/authentication'
@@ -59,12 +60,12 @@ export class PincodeSet extends React.Component<Props, State> {
     errorText: undefined,
   }
 
-  getNextScreen = () => {
+  navigateToNextScreen = () => {
     if (this.props.choseToRestoreAccount) {
-      return Screens.ImportWallet
+      navigate(Screens.ImportWallet)
+    } else {
+      navigateClearingStack(Screens.VerificationEducationScreen)
     }
-
-    return Screens.EnterInviteCode
   }
 
   onChangePin1 = (pin1: string) => {
@@ -102,7 +103,7 @@ export class PincodeSet extends React.Component<Props, State> {
       setCachedPin(DEFAULT_CACHE_ACCOUNT, pin1)
       this.props.setPincode(PincodeType.CustomPin)
       ValoraAnalytics.track(OnboardingEvents.pin_set)
-      this.props.navigation.navigate(this.getNextScreen())
+      this.navigateToNextScreen()
     } else {
       this.props.navigation.setParams({ isVerifying: false })
       ValoraAnalytics.track(OnboardingEvents.pin_invalid, { error: 'Pins do not match' })
@@ -120,8 +121,8 @@ export class PincodeSet extends React.Component<Props, State> {
     const { pin1, pin2, errorText } = this.state
 
     return (
-      <SafeAreaView style={style.container}>
-        <DevSkipButton nextScreen={this.getNextScreen()} />
+      <SafeAreaView style={styles.container}>
+        <DevSkipButton onSkip={this.navigateToNextScreen} />
         {isVerifying ? (
           // Verify
           <Pincode
@@ -144,7 +145,7 @@ export class PincodeSet extends React.Component<Props, State> {
   }
 }
 
-const style = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.onboardingBackground,

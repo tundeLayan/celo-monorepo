@@ -1,12 +1,13 @@
 import Touchable from '@celo/react-components/components/Touchable'
 import withTextInputPasteAware from '@celo/react-components/components/WithTextInputPasteAware'
 import colors from '@celo/react-components/styles/colors'
-import fontStyles from '@celo/react-components/styles/fonts.v2'
+import fontStyles from '@celo/react-components/styles/fonts'
+import Clipboard from '@react-native-community/clipboard'
 import * as React from 'react'
 import { WithTranslation } from 'react-i18next'
-import { Clipboard, Platform, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native'
+import { Platform, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native'
 import FlagSecure from 'react-native-flag-secure-android'
-import { isValidBackupPhrase, isValidSocialBackupPhrase } from 'src/backup/utils'
+import { isValidBackupPhrase } from 'src/backup/utils'
 import { Namespaces, withTranslation } from 'src/i18n'
 import Logger from 'src/utils/Logger'
 
@@ -19,7 +20,6 @@ export enum BackupPhraseContainerMode {
 
 export enum BackupPhraseType {
   BACKUP_KEY = 'BACKUP_KEY',
-  SOCIAL_BACKUP = 'SOCIAL_BACKUP',
 }
 
 type Props = {
@@ -30,6 +30,7 @@ type Props = {
   showCopy?: boolean
   style?: ViewStyle
   onChangeText?: (value: string) => void
+  includeHeader?: boolean
   testID?: string
 } & WithTranslation
 
@@ -66,22 +67,16 @@ export class BackupPhraseContainer extends React.Component<Props> {
   }
 
   render() {
-    const { t, value: words, showCopy, style, mode, type, index, testID } = this.props
+    const { t, value: words, showCopy, style, mode, type, includeHeader, testID } = this.props
 
     return (
       <View style={style}>
         <View style={styles.headerContainer}>
-          {type === BackupPhraseType.BACKUP_KEY &&
-            (BackupPhraseContainerMode.INPUT ? (
-              <View style={styles.writeDownKeyContainer}>
-                <Text style={styles.writeDownKey}>{t('writeDownKey')}</Text>
-                <Text style={fontStyles.label}>{t('yourAccountKey')}</Text>
-              </View>
-            ) : (
-              <Text style={styles.headerText}>{t('yourAccountKey')}</Text>
-            ))}
-          {type === BackupPhraseType.SOCIAL_BACKUP && (
-            <Text style={styles.headerText}>{t('socialBackupPhraseHeader', { index })}</Text>
+          {type === BackupPhraseType.BACKUP_KEY && includeHeader !== false && (
+            <View style={styles.writeDownKeyContainer}>
+              <Text style={styles.writeDownKey}>{t('writeDownKey')}</Text>
+              <Text style={fontStyles.label}>{t('yourAccountKey')}</Text>
+            </View>
           )}
           {showCopy && (
             <Touchable borderless={true} onPress={this.onPressCopy}>
@@ -91,24 +86,21 @@ export class BackupPhraseContainer extends React.Component<Props> {
         </View>
         {mode === BackupPhraseContainerMode.READONLY && (
           <View style={styles.phraseContainer}>
-            {!!words && <Text style={styles.phraseText}>{words}</Text>}
+            {!!words && (
+              <Text style={styles.phraseText} testID="AccountKeyWords">
+                {words}
+              </Text>
+            )}
           </View>
         )}
         {mode === BackupPhraseContainerMode.INPUT && (
           <View style={styles.phraseInputContainer}>
             <PhraseInput
-              style={[
-                styles.phraseInputText,
-                type === BackupPhraseType.SOCIAL_BACKUP && styles.socialPhraseInputText,
-              ]}
+              style={[styles.phraseInputText]}
               value={words || ''}
               placeholder={t('backupPhrasePlaceholder')}
               onChangeText={this.onPhraseInputChange}
-              shouldShowClipboard={
-                type === BackupPhraseType.BACKUP_KEY
-                  ? isValidBackupPhrase
-                  : isValidSocialBackupPhrase
-              }
+              shouldShowClipboard={isValidBackupPhrase}
               underlineColorAndroid="transparent"
               placeholderTextColor={colors.gray4}
               enablesReturnKeyAutomatically={true}
@@ -147,6 +139,8 @@ const styles = StyleSheet.create({
   phraseContainer: {
     marginTop: 8,
     backgroundColor: colors.beige,
+    borderWidth: 1,
+    borderColor: colors.dark,
     borderRadius: 4,
     alignContent: 'center',
     justifyContent: 'center',
@@ -154,28 +148,18 @@ const styles = StyleSheet.create({
   },
   phraseText: {
     ...fontStyles.regular,
+    fontSize: 22,
+    lineHeight: 32,
   },
   phraseInputContainer: {
     marginTop: 10,
   },
   phraseInputText: {
     ...fontStyles.regular,
-    borderWidth: 1,
-    borderColor: colors.gray2,
-    borderRadius: 4,
     minHeight: 125,
     padding: 14,
     paddingTop: 16,
     textAlignVertical: 'top',
-  },
-  socialPhraseInputText: {
-    minHeight: 90,
-  },
-  button: {
-    alignSelf: 'center',
-    flex: 1,
-    paddingBottom: 0,
-    marginBottom: 0,
   },
 })
 
