@@ -493,9 +493,10 @@ export const simulateClient = async (
   blockscoutUrl: string,
   blockscoutMeasurePercent: number, // percent of time in range [0, 100] to measure blockscout for a tx
   index: number,
+  web3Provider: string,
 ) => {
   // Assume the node is accessible via localhost with senderAddress unlocked
-  const kit = newKitFromWeb3(new Web3('http://localhost:8545'))
+  const kit = newKitFromWeb3(new Web3(web3Provider))
   kit.defaultAccount = senderAddress
   const gasPriceFixed = 101000000
 
