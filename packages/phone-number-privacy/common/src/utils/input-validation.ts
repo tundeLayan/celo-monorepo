@@ -18,6 +18,7 @@ export function isBodyReasonablySized(requestBody: any): boolean {
 }
 
 export function hasValidQueryPhoneNumberParam(requestBody: any): boolean {
+  // TODO: fix this check
   return !!requestBody.blindedQueryPhoneNumber
 }
 
@@ -26,7 +27,7 @@ export function hasValidPhoneNumberHash(requestBody: any): boolean {
 }
 
 export function hasValidTimestamp(requestBody: any): boolean {
-  // TODO(Alec): make timestamp required
+  // TODO: make timestamp required
   return (
     !requestBody.timestamp ||
     (typeof requestBody.timestamp === 'number' &&
@@ -34,6 +35,7 @@ export function hasValidTimestamp(requestBody: any): boolean {
   )
 }
 
+//TODO: remove duplicates?
 export function phoneNumberHashIsValidIfExists(requestBody: any): boolean {
   return !requestBody.hashedPhoneNumber || isByte32(requestBody.hashedPhoneNumber)
 }

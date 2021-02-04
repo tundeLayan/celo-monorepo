@@ -77,41 +77,30 @@ export async function handleGetBlindedMessagePartialSig(
     const { account, blindedQueryPhoneNumber, hashedPhoneNumber } = request.body
 
     const errorMsgs: string[] = []
-    // In the case of a DB or blockchain connection failure, don't block user
+    // In the case of a blockchain connection failure, don't block user
     // but set the error status accordingly
     const meterGetQueryCountAndBlockNumber = Histograms.getBlindedSigInstrumentation
       .labels('getQueryCountAndBlockNumber')
       .startTimer()
-    const [_queryCount, _blockNumber] = await Promise.allSettled([
-      getRemainingQueryCount(logger, account, hashedPhoneNumber).catch((err) => {
-        Counters.databaseErrors.labels(Labels.read).inc()
-        logger.error('Failed to get user quota')
-        logger.error({ err })
-        errorMsgs.push(ErrorMessage.DATABASE_GET_FAILURE)
-        return { performedQueryCount: -1, totalQuota: -1 }
-      }),
-      getBlockNumber().catch((err) => {
+    const [_queryCount, _blockNumber] = await Promise.all([
+      // The database read of the user's performedQueryCount included here returns 0 on error
+      getRemainingQueryCount(logger, account, hashedPhoneNumber),
+      getBlockNumber(),
+    ])
+      .catch((err) => {
         Counters.blockchainErrors.labels(Labels.read).inc()
-        logger.error('Failed to get latest block number')
-        logger.error({ err })
         errorMsgs.push(ErrorMessage.CONTRACT_GET_FAILURE)
-        return -1
-      }),
-    ]).finally(meterGetQueryCountAndBlockNumber)
+        logger.error({ err })
+        return [{ performedQueryCount: -1, totalQuota: -1 }, -1]
+      })
+      .finally(meterGetQueryCountAndBlockNumber)
 
-    let totalQuota = -1
-    let performedQueryCount = -1
-    let blockNumber = -1
-    if (_queryCount.status === 'fulfilled') {
-      performedQueryCount = _queryCount.value.performedQueryCount
-      totalQuota = _queryCount.value.totalQuota
-    }
-    if (_blockNumber.status === 'fulfilled') {
-      blockNumber = _blockNumber.value
-    }
+    const totalQuota = (_queryCount as any).totalQuota
+    let performedQueryCount = (_queryCount as any).performedQueryCount
+    const blockNumber = _blockNumber as number
 
     if (
-      !errorMsgs.includes(ErrorMessage.DATABASE_GET_FAILURE) &&
+      !errorMsgs.includes(ErrorMessage.CONTRACT_GET_FAILURE) &&
       performedQueryCount >= totalQuota
     ) {
       logger.debug('No remaining query count')

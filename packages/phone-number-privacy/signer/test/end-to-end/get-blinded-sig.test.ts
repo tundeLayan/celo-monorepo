@@ -37,6 +37,9 @@ contractkit.addAccount(PRIVATE_KEY3)
 jest.setTimeout(30000)
 
 describe('Running against a deployed service', () => {
+  beforeAll(() => {
+    console.log(ODIS_SIGNER)
+  })
   describe('Returns status 400 with invalid input', () => {
     it('With invalid address', async () => {
       const response = await postToSignMessage(BLINDED_PHONE_NUMBER, '0x1234', Date.now(), 'ignore')
