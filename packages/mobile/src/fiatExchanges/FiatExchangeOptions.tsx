@@ -1,5 +1,6 @@
 import Button, { BtnSizes, BtnTypes } from '@celo/react-components/components/Button'
 import Touchable from '@celo/react-components/components/Touchable'
+import RadioButton from '@celo/react-components/icons/RadioButton'
 import colors from '@celo/react-components/styles/colors'
 import fontStyles from '@celo/react-components/styles/fonts'
 import variables from '@celo/react-components/styles/variables'
@@ -17,20 +18,14 @@ import { kotaniEnabledSelector, pontoEnabledSelector } from 'src/app/selectors'
 import BackButton from 'src/components/BackButton'
 import { KOTANI_URI, PONTO_URI } from 'src/config'
 import FundingEducationDialog from 'src/fiatExchanges/FundingEducationDialog'
-import { openMoonpay } from 'src/fiatExchanges/utils'
 import i18n, { Namespaces } from 'src/i18n'
 import InfoIcon from 'src/icons/InfoIcon'
-import RadioIcon from 'src/icons/RadioIcon'
-import { LocalCurrencyCode } from 'src/localCurrency/consts'
-import { getLocalCurrencyCode } from 'src/localCurrency/selectors'
 import { emptyHeader } from 'src/navigator/Headers'
 import { navigate } from 'src/navigator/NavigationService'
 import { Screens } from 'src/navigator/Screens'
 import { StackParamList } from 'src/navigator/types'
 import { useCountryFeatures } from 'src/utils/countryFeatures'
 import Logger from 'src/utils/Logger'
-
-const FALLBACK_CURRENCY = LocalCurrencyCode.USD
 
 type RouteProps = StackScreenProps<StackParamList, Screens.FiatExchangeOptions>
 type Props = RouteProps
@@ -83,7 +78,7 @@ function CurrencyRadioItem({
           { borderColor: currencyBorderColor(selected) },
         ]}
       >
-        <RadioIcon selected={selected} />
+        <RadioButton selected={selected} disabled={!enabled} />
         <Text style={[styles.currencyItemTitle, enabled ? {} : { color: colors.gray3 }]}>
           {title}
         </Text>
@@ -103,11 +98,11 @@ function PaymentMethodRadioItem({
   onSelect: () => void
   text: string
   enabled?: boolean
-}) {
+}): JSX.Element {
   return (
     <TouchableWithoutFeedback onPress={onSelect} disabled={!enabled}>
       <View style={styles.paymentMethodItemContainer}>
-        <RadioIcon selected={selected} />
+        <RadioButton selected={selected} disabled={!enabled} />
         <Text style={[styles.paymentMethodItemText, enabled ? {} : { color: colors.gray3 }]}>
           {text}
         </Text>
@@ -119,7 +114,6 @@ function PaymentMethodRadioItem({
 function FiatExchangeOptions({ route, navigation }: Props) {
   const { t } = useTranslation(Namespaces.fiatExchangeFlow)
   const isCashIn = route.params?.isCashIn ?? true
-  const localCurrency = useSelector(getLocalCurrencyCode)
   const { MOONPAY_DISABLED, KOTANI_SUPPORTED, PONTO_SUPPORTED } = useCountryFeatures()
   const pontoEnabled = useSelector(pontoEnabledSelector)
   const kotaniEnabled = useSelector(kotaniEnabledSelector)
@@ -153,10 +147,8 @@ function FiatExchangeOptions({ route, navigation }: Props) {
       navigate(Screens.BidaliScreen, { currency: selectedCurrency })
     } else if (selectedPaymentMethod === PaymentMethod.ADDRESS) {
       navigate(Screens.WithdrawCeloScreen, { isCashOut: true })
-    } else if (selectedCurrency === CURRENCY_ENUM.DOLLAR) {
-      navigate(Screens.ProviderOptionsScreen, { isCashIn: true })
     } else {
-      openMoonpay(localCurrency || FALLBACK_CURRENCY, CURRENCY_ENUM.GOLD)
+      navigate(Screens.ProviderOptionsScreen, { isCashIn: true, currency: selectedCurrency })
     }
   }
 
