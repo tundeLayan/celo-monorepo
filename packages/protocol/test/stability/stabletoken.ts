@@ -26,6 +26,8 @@ const StableToken: StableTokenContract = artifacts.require('StableToken')
 // TODO(mcortesi): Use BN.js
 StableToken.numberFormat = 'BigNumber'
 
+const isTest = true
+
 contract('StableToken', (accounts: string[]) => {
   let freezer: FreezerInstance
   let stableToken: StableTokenInstance
@@ -39,7 +41,7 @@ contract('StableToken', (accounts: string[]) => {
     registry = await Registry.new()
     freezer = await Freezer.new()
     await registry.setAddressFor(CeloContractName.Freezer, freezer.address)
-    stableToken = await StableToken.new()
+    stableToken = await StableToken.new(isTest)
     const response = await stableToken.initialize(
       'Celo Dollar',
       'cUSD',
