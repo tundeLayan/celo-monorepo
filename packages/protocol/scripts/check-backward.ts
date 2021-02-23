@@ -1,7 +1,7 @@
 import { ASTContractVersionsChecker } from '@celo/protocol/lib/compatibility/ast-version'
 import { DefaultCategorizer } from '@celo/protocol/lib/compatibility/categorizer'
 import { ASTBackwardReport, instantiateArtifacts } from '@celo/protocol/lib/compatibility/utils'
-import { checkInheritance } from '@celo/protocol/lib/web3-utils'
+import { checkInheritanceDeep } from '@celo/protocol/lib/web3-utils'
 import { writeJsonSync } from 'fs-extra'
 import path from 'path'
 import tmp from 'tmp'
@@ -78,7 +78,9 @@ try {
   const versionDeltas = backward.report.versionDeltas()
   Object.entries(versionDeltas).forEach(([contract, delta]) => {
     if (delta.isVersionIncremented()) {
-      if (checkInheritance('Initializable', newArtifacts.getArtifactByName(contract))) {
+      if (
+        checkInheritanceDeep('Initializable', newArtifacts.getArtifactByName(contract), artifacts)
+      ) {
         console.error(
           `Contract ${contract} has positive version delta but is not using InitializableV2`
         )

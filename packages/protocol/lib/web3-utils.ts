@@ -256,7 +256,7 @@ export function deploymentForContract<ContractInstance extends Truffle.ContractI
   return (deployer: any, networkName: string, _accounts: string[]) => {
     console.log('Deploying', name)
     deployer.deploy(ContractProxy)
-    if (checkInheritance('InitializableV2', Contract)) {
+    if (checkInheritanceDeep('InitializableV2', Contract, artifacts)) {
       deployer.deploy(Contract, notTest)
     } else {
       deployer.deploy(Contract)
@@ -394,8 +394,21 @@ export function getFunctionSelectorsForContract(contract: any, contractName: str
 
 export function checkInheritance(baseContractName: string, derivativeContractArtifact: any) {
   return derivativeContractArtifact.ast.nodes.find(
-    (astNode: any) => astNode.nodeType === 'ImportDirective' && (astNode.file as string).endsWith(baseContractName + '.sol')
+    (astNode: any) => astNode.nodeType === 'ImportDirective' && (astNode.file as string).endsWith(`${baseContractName}.sol`)
   ) !== undefined
+}
+
+export function checkInheritanceDeep(baseContractName: string, derivativeContractArtifact: any, artifacts: any) {
+  const isImport = (astNode: any) => astNode.nodeType === 'ImportDirective'
+  const imports: any[] = derivativeContractArtifact.ast.nodes.filter((astNode: any) => isImport(astNode))
+  while (imports.length) { // BFS 
+    const importedContractName = (imports.pop().file as string).split('/').pop().split('.')[0]
+    if (importedContractName ===  baseContractName) {
+      return true
+    }
+    imports.push(...artifacts.require(importedContractName).ast.nodes.filter((astNode: any) => isImport(astNode)))
+  }
+  return false
 }
 
 export async function retryTx(fn: any, args: any[]) {
