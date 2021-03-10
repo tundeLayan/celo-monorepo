@@ -1,6 +1,6 @@
 import { verifyBytecodes } from '@celo/protocol/lib/compatibility/verify-bytecode'
 import { CeloContractName, celoRegistryAddress } from '@celo/protocol/lib/registry-utils'
-import { getBuildArtifacts } from '@openzeppelin/upgrades'
+import { getTruffleArtifact } from '@openzeppelin/upgrades'
 import { readJsonSync } from 'fs-extra'
 import { ProxyInstance, RegistryInstance } from 'types'
 
@@ -38,10 +38,10 @@ const initializationData = argv.initialize_data ? readJsonSync(argv.initialize_d
 module.exports = async (callback: (error?: any) => number) => {
   try {
     const registry = await Registry.at(celoRegistryAddress)
-    const buildArtifacts = getBuildArtifacts(artifactsDirectory)
+    const TruffleArtifact = getTruffleArtifact(artifactsDirectory)
     await verifyBytecodes(
       Object.keys(CeloContractName),
-      buildArtifacts,
+      TruffleArtifact,
       registry,
       proposal,
       Proxy,

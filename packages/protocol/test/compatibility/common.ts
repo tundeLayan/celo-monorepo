@@ -1,4 +1,4 @@
-import { getBuildArtifacts } from '@openzeppelin/upgrades'
+import { getTruffleArtifact } from '@openzeppelin/upgrades'
 import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
@@ -62,5 +62,5 @@ export function getTestArtifacts(caseName: string) {
       `yarn run --silent truffle compile --all --contracts_directory=${tmpSrcDirectory} --contracts_build_directory=${buildDirectory}`
     )
   }
-  return getBuildArtifacts(`${buildDirectory}`)
+  return getTruffleArtifact(`${buildDirectory}`)
 }

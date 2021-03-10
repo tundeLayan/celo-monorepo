@@ -1,13 +1,16 @@
 // tslint:disable: max-classes-per-file
-import { BuildArtifacts } from '@openzeppelin/upgrades'
+import { TruffleArtifact } from '@openzeppelin/upgrades'
 import ContractAST from '@openzeppelin/upgrades/lib/utils/ContractAST'
 
-import { ASTCodeCompatibilityReport, } from '@celo/protocol/lib/compatibility/ast-code'
+import { ASTCodeCompatibilityReport } from '@celo/protocol/lib/compatibility/ast-code'
 import { ASTStorageCompatibilityReport } from '@celo/protocol/lib/compatibility/ast-layout'
 import { categorize, Categorizer, ChangeType } from '@celo/protocol/lib/compatibility/categorizer'
 import { Change } from '@celo/protocol/lib/compatibility/change'
 import { makeZContract } from '@celo/protocol/lib/compatibility/internal'
-import { ContractVersionDelta, ContractVersionDeltaIndex } from '@celo/protocol/lib/compatibility/version'
+import {
+  ContractVersionDelta,
+  ContractVersionDeltaIndex,
+} from '@celo/protocol/lib/compatibility/version'
 /**
  * Value object holding all uncategorized storage and code reports.
  */
@@ -30,10 +33,14 @@ export class ASTReports {
       }
       return true
     }
-    const codeReport = new ASTCodeCompatibilityReport(this.code.getChanges().filter(r => included(r.getContract())))
-    const storageReports = this.storage.filter(r => included(r.contract))
+    const codeReport = new ASTCodeCompatibilityReport(
+      this.code.getChanges().filter((r) => included(r.getContract()))
+    )
+    const storageReports = this.storage.filter((r) => included(r.contract))
 
-    const libraryLinkingReport = this.libraryLinking.filter(change => included(change.getContract()))
+    const libraryLinkingReport = this.libraryLinking.filter((change) =>
+      included(change.getContract())
+    )
 
     return new ASTReports(codeReport, storageReports, libraryLinkingReport)
   }
@@ -43,7 +50,7 @@ export class ASTReports {
  * A mapping {contract name => {@link CategorizedChanges}}.
  */
 export interface CategorizedChangesIndex {
-  [contract: string]: CategorizedChanges;
+  [contract: string]: CategorizedChanges
 }
 
 /**
@@ -64,15 +71,12 @@ class CategorizedChangesBuilder {
  * and code changes.
  */
 export class CategorizedChanges {
-
   /**
    * @returns a new {@link CategorizedChanges} according to
    * the {@link Categorizer} given.
    */
-  static fromReports(
-    reports: ASTReports,
-    categorizer: Categorizer): CategorizedChanges {
-    const storage = reports.storage.filter(r => !r.compatible)
+  static fromReports(reports: ASTReports, categorizer: Categorizer): CategorizedChanges {
+    const storage = reports.storage.filter((r) => !r.compatible)
     const c = categorize(reports.code.getChanges().concat(reports.libraryLinking), categorizer)
     const major = c[ChangeType.Major]
     const minor = c[ChangeType.Minor]
@@ -84,13 +88,14 @@ export class CategorizedChanges {
     public readonly storage: ASTStorageCompatibilityReport[],
     public readonly major: Change[],
     public readonly minor: Change[],
-    public readonly patch: Change[]) {}
+    public readonly patch: Change[]
+  ) {}
 
   /**
    * @returns a mapping {contract name => {@link CategorizedChanges}}
    */
   byContract = (): CategorizedChangesIndex => {
-    const builders: {[contract: string]: CategorizedChangesBuilder} = {}
+    const builders: { [contract: string]: CategorizedChangesBuilder } = {}
     const builder = (contract: string) => {
       if (!builders.hasOwnProperty(contract)) {
         builders[contract] = new CategorizedChangesBuilder()
@@ -121,7 +126,7 @@ export interface ASTVersionedReportIndex {
   libraries: ContractReports
 }
 
-const isLibrary = (contract: string, artifacts: BuildArtifacts) => {
+const isLibrary = (contract: string, artifacts: TruffleArtifact[]) => {
   const artifact = artifacts.getArtifactByName(contract)
   const zContract = makeZContract(artifact)
   const ast = new ContractAST(zContract, artifacts)
@@ -136,7 +141,6 @@ const isLibrary = (contract: string, artifacts: BuildArtifacts) => {
  * Holds {@link CategorizedChanges} and the calculated {@link ContractVersionDelta}.
  */
 export class ASTVersionedReport {
-
   /**
    * @returns a new {@link ASTVersionedReport} with the provided
    * {@link CategorizedChanges} and a calculated version delta
@@ -157,11 +161,14 @@ export class ASTVersionedReport {
    * {contract name => {@link ASTVersionedReport}}, each built
    * by the {@link CategorizedChanges} for each contract.
    */
-  static createByContract = (changes: CategorizedChanges, artifacts: BuildArtifacts): ASTVersionedReportIndex => {
+  static createByContract = (
+    changes: CategorizedChanges,
+    artifacts: TruffleArtifact[]
+  ): ASTVersionedReportIndex => {
     const changesByContract = changes.byContract()
     const reportIndex: ASTVersionedReportIndex = {
       contracts: {},
-      libraries: {}
+      libraries: {},
     }
     Object.keys(changesByContract).forEach((contract: string) => {
       const report = ASTVersionedReport.create(changesByContract[contract])
@@ -176,17 +183,24 @@ export class ASTVersionedReport {
 
   constructor(
     public readonly changes: CategorizedChanges,
-    public readonly versionDelta: ContractVersionDelta) {}
+    public readonly versionDelta: ContractVersionDelta
+  ) {}
 }
 
 /**
  * A report holding detailed {@link ASTVersionedReport} for each contract and library.
  */
 export class ASTDetailedVersionedReport {
-
-  static create = (fullReports: ASTReports, artifacts: BuildArtifacts, categorizer: Categorizer): ASTDetailedVersionedReport => {
+  static create = (
+    fullReports: ASTReports,
+    artifacts: TruffleArtifact[],
+    categorizer: Categorizer
+  ): ASTDetailedVersionedReport => {
     const changes = CategorizedChanges.fromReports(fullReports, categorizer)
-    const reportIndex: ASTVersionedReportIndex = ASTVersionedReport.createByContract(changes, artifacts)
+    const reportIndex: ASTVersionedReportIndex = ASTVersionedReport.createByContract(
+      changes,
+      artifacts
+    )
     return new ASTDetailedVersionedReport(reportIndex.contracts, reportIndex.libraries)
   }
 

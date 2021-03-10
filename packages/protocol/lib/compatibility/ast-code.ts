@@ -1,40 +1,42 @@
 import { stripMetadata } from '@celo/protocol/lib/bytecode'
 import {
   Change,
-  ContractKindChange, DeployedBytecodeChange, MethodAddedChange,
-  MethodMutabilityChange, MethodRemovedChange, MethodReturnChange,
-  MethodVisibilityChange, NewContractChange
+  ContractKindChange,
+  DeployedBytecodeChange,
+  MethodAddedChange,
+  MethodMutabilityChange,
+  MethodRemovedChange,
+  MethodReturnChange,
+  MethodVisibilityChange,
+  NewContractChange,
 } from '@celo/protocol/lib/compatibility/change'
-import { makeZContract } from '@celo/protocol/lib/compatibility/internal'
-import {
-  BuildArtifacts,
-  Contract as ZContract
-} from '@openzeppelin/upgrades'
-import ContractAST from '@openzeppelin/upgrades/lib/utils/ContractAST'
+import { BuildArtifacts, Contract as ZContract } from '@openzeppelin/upgrades'
+import { ContractValidation, ValidationRunData } from '@openzeppelin/upgrades-core'
+import { ContractDefinition } from 'solidity-ast'
 
 export enum Visibility {
-  NONE = "",
-  EXTERNAL = "external",
-  PUBLIC = "public",
-  INTERNAL = "internal",
-  PRIVATE = "private"
+  NONE = '',
+  EXTERNAL = 'external',
+  PUBLIC = 'public',
+  INTERNAL = 'internal',
+  PRIVATE = 'private',
 }
 
 export enum Mutability {
-  NONE = "",
-  PURE = "pure",
-  VIEW = "view",
-  PAYABLE = "payable"
+  NONE = '',
+  PURE = 'pure',
+  VIEW = 'view',
+  PAYABLE = 'payable',
 }
 
 enum StorageLocation {
-  NONE = "",
+  NONE = '',
   // Default gets replaced to None when comparing parameter storage locations
-  DEFAULT = "default",
+  DEFAULT = 'default',
 
-  STORAGE = "storage",
-  MEMORY = "memory",
-  CALLDATA = "calldata",
+  STORAGE = 'storage',
+  MEMORY = 'memory',
+  CALLDATA = 'calldata',
 }
 
 const CONTRACT_KIND_CONTRACT = 'contract'
@@ -90,18 +92,18 @@ function getSignature(method: Method): string {
 }
 
 interface MethodIndex {
-  [signature: string]: Method;
+  [signature: string]: Method
 }
 
 /**
  * @returns A method index where {key: signature => value: method}
  */
 function createMethodIndex(methods: Method[]): MethodIndex {
-  const asPairs = methods.map(m => ({ [`${getSignature(m)}`]: m }))
+  const asPairs = methods.map((m) => ({ [`${getSignature(m)}`]: m }))
   return Object.assign({}, ...asPairs)
 }
 
-function mergeReports(reports: ASTCodeCompatibilityReport[]): ASTCodeCompatibilityReport{
+function mergeReports(reports: ASTCodeCompatibilityReport[]): ASTCodeCompatibilityReport {
   const report = new ASTCodeCompatibilityReport([])
   reports.forEach((r: ASTCodeCompatibilityReport): void => {
     report.include(r)
@@ -114,14 +116,18 @@ function parametersSignature(parameters: Parameter[]): string {
     return OUT_VOID_PARAMETER_STRING
   }
   const singleSignature = (p: Parameter): string => {
-    const storage = p.storageLocation === StorageLocation.DEFAULT ? StorageLocation.NONE : `${p.storageLocation} `
+    const storage =
+      p.storageLocation === StorageLocation.DEFAULT ? StorageLocation.NONE : `${p.storageLocation} `
     return `${storage}${p.typeDescriptions.typeString}`
   }
   return parameters.map(singleSignature).join(', ')
 }
 
-
-function checkMethodCompatibility(contract: string, m1: Method, m2: Method): ASTCodeCompatibilityReport {
+function checkMethodCompatibility(
+  contract: string,
+  m1: Method,
+  m2: Method
+): ASTCodeCompatibilityReport {
   const report = new ASTCodeCompatibilityReport([])
   const signature = getSignature(m1)
   // Sanity check
@@ -151,14 +157,15 @@ function checkMethodCompatibility(contract: string, m1: Method, m2: Method): AST
 }
 
 const getCheckableMethodsFromAST = (contract: ContractAST, id: string): any[] => {
-  const checkableMethods = (method: Method) => method.visibility === Visibility.EXTERNAL || method.visibility === Visibility.PUBLIC
+  const checkableMethods = (method: Method) =>
+    method.visibility === Visibility.EXTERNAL || method.visibility === Visibility.PUBLIC
   try {
     return contract.getMethods().filter(checkableMethods)
   } catch (error) {
     throw {
       message: `Error in the @openzeppelin/.../ContractAST.getMethods() for the artifacts in the '${id}' folder. 
     Most likely this is due to a botched build, or a build on a non-cleaned folder.`,
-      error
+      error,
     }
   }
 }
@@ -166,7 +173,8 @@ const getCheckableMethodsFromAST = (contract: ContractAST, id: string): any[] =>
 function doASTCompatibilityReport(
   contractName: string,
   oldAST: ContractAST,
-  newAST: ContractAST): ASTCodeCompatibilityReport {
+  newAST: ContractAST
+): ASTCodeCompatibilityReport {
   const oldMethods = createMethodIndex(getCheckableMethodsFromAST(oldAST, 'old'))
   const newMethods = createMethodIndex(getCheckableMethodsFromAST(newAST, 'new'))
 
@@ -194,8 +202,13 @@ function doASTCompatibilityReport(
   return report
 }
 
-function generateASTCompatibilityReport(oldContract: ZContract, oldArtifacts: BuildArtifacts,
-  newContract: ZContract, newArtifacts: BuildArtifacts): ASTCodeCompatibilityReport {
+function generateASTCompatibilityReport(
+  contractName: string,
+  oldArtifact: ContractValidation,
+  oldArtifacts: ValidationRunData,
+  newArtifact: ContractValidation,
+  newArtifacts: ValidationRunData
+): ASTCodeCompatibilityReport {
   // Sanity checks
   if (newContract === null) {
     throw new Error('newContract cannot be null')
@@ -225,7 +238,9 @@ function generateASTCompatibilityReport(oldContract: ZContract, oldArtifacts: Bu
 
   // Name sanity check
   if (oldContract.schema.contractName !== contractName) {
-    throw new Error(`Contract names should be equal: ${oldContract.schema.contractName} !== ${contractName}`)
+    throw new Error(
+      `Contract names should be equal: ${oldContract.schema.contractName} !== ${contractName}`
+    )
   }
 
   const oldAST = new ContractAST(oldContract, oldArtifacts)
@@ -237,7 +252,10 @@ function generateASTCompatibilityReport(oldContract: ZContract, oldArtifacts: Bu
 
   const report = doASTCompatibilityReport(contractName, oldAST, newAST)
   // Check deployed byte code change
-  if (stripMetadata(oldContract.schema.deployedBytecode) !== stripMetadata(newContract.schema.deployedBytecode)) {
+  if (
+    stripMetadata(oldContract.schema.deployedBytecode) !==
+    stripMetadata(newContract.schema.deployedBytecode)
+  ) {
     report.push(new DeployedBytecodeChange(contractName))
   }
   return report
@@ -250,13 +268,18 @@ function generateASTCompatibilityReport(oldContract: ZContract, oldArtifacts: Bu
  * @param newArtifacts
  */
 export function reportASTIncompatibilities(
-  oldArtifacts: BuildArtifacts,
-  newArtifacts: BuildArtifacts): ASTCodeCompatibilityReport {
-  const reports = newArtifacts.listArtifacts()
-  .map((newArtifact) => {
-    const oldArtifact = oldArtifacts.getArtifactByName(newArtifact.contractName)
-    const oldZContract = oldArtifact ? makeZContract(oldArtifact) : null
-    return generateASTCompatibilityReport(oldZContract, oldArtifacts, makeZContract(newArtifact), newArtifacts)
+  oldArtifacts: ValidationRunData,
+  newArtifacts: ValidationRunData
+): ASTCodeCompatibilityReport {
+  const reports = Object.entries(newArtifacts).map(([newArtifactName, newArtifact]) => {
+    const oldArtifact = oldArtifacts[newArtifactName]
+    return generateASTCompatibilityReport(
+      newArtifactName,
+      oldArtifact,
+      oldArtifacts,
+      newArtifact,
+      newArtifacts
+    )
   })
   return mergeReports(reports)
 }

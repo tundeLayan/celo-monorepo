@@ -1,184 +1,59 @@
-import { Contract as Web3Contract } from '@celo/connect';
-import { Artifact, TypeInfo } from '@celo/protocol/lib/compatibility/internal';
 import {
-  BuildArtifacts,
-  compareStorageLayouts,
-  Contract as ZContract,
+  ContractValidation,
   getStorageLayout,
-  Operation,
-  StorageLayoutInfo
-} from '@openzeppelin/upgrades';
-const  Web3 = require('web3')
+  ValidationRunData,
+} from '@openzeppelin/upgrades-core'
+import { StorageLayoutComparator } from '@openzeppelin/upgrades-core/dist/storage/compare'
+import { getDetailedLayout } from '@openzeppelin/upgrades-core/dist/storage/layout'
 
-const web3 = new Web3(null)
-
-// getStorageLayout needs an oz-sdk Contract class instance. This class is a
-// subclass of Contract from web3-eth-contract, with an added .schema member and
-// several methods.
-//
-// Couldn't find an easy way of getting one just from contract artifacts. But
-// for getStorageLayout we really only need .schema.ast and .schema.contractName.
-const addSchemaForLayoutChecking = (web3Contract: Web3Contract, artifact: any): ZContract => {
-  // @ts-ignore
-  const contract = web3Contract as Contract
-  // @ts-ignore
-  contract.schema = {}
-  contract.schema.ast = artifact.ast
-  contract.schema.contractName = artifact.contractName
-  return contract
-}
-
-const makeZContract = (artifact: any): ZContract => {
-  const contract = new web3.eth.Contract(artifact.abi)
-
-  return addSchemaForLayoutChecking(contract, artifact)
-}
-
-export const getLayout = (artifact: Artifact, artifacts: BuildArtifacts) => {
-  const contract = makeZContract(artifact)
-
-  return getStorageLayout(contract, artifacts)
-}
-
-const selectIncompatibleOperations = (diff: Operation[]) =>
-  diff.filter(operation => operation.action !== 'append')
+export const getLayout = (artifact: ContractValidation, artifacts: ValidationRunData) =>
+  getDetailedLayout(getStorageLayout(artifacts, artifact.version))
 
 export interface ASTStorageCompatibilityReport {
   contract: string
   compatible: boolean
-  errors: string[]
+  errors: string
 }
 
-const operationToDescription = (operation: Operation) => {
-  let message: string
-
-  const updated = operation.updated
-  const original = operation.original
-
-  switch (operation.action) {
-    case 'typechange':
-      message = `variable ${updated.label} had type ${original.type}, now has type ${updated.type}`
-      break
-    case 'insert':
-      message = `variable ${updated.label} was inserted`
-      break
-    case 'pop':
-      message = `variable ${original.label} was removed`
-      break
-    case 'delete':
-      message = `variable ${original.label} was removed`
-      break
-    case 'rename':
-      message = `variable ${updated.label} was renamed from ${original.label}`
-      break
-    case 'append':
-      message = `variable ${updated.label} was appended`
-
-    default:
-      message = `unknown operation ${operation.action}`
-  }
-
-  return message
-}
-
-const generateLayoutCompatibilityReport = (oldLayout: StorageLayoutInfo, newLayout: StorageLayoutInfo) => {
-  const diff = compareStorageLayouts(oldLayout, newLayout)
-  const incompatibilities = selectIncompatibleOperations(diff)
-  if (incompatibilities.length === 0) {
-    return {
-      compatible: true,
-      errors: []
-    }
-  } else {
-    return {
-      compatible: false,
-      errors: incompatibilities.map(operationToDescription)
-    }
-  }
-}
-
-const compareStructDefinitions = (oldType: TypeInfo, newType: TypeInfo) => {
-  if (oldType.kind !== 'struct') {
-    return {
-      same: false,
-      errors: [`${newType.label} wasn't a struct type, now is`]
-    }
-  }
-
-  if (oldType.members.length !== newType.members.length) {
-    return {
-      same: false,
-      errors: [`struct ${newType.label} has changed members`]
-    }
-  }
-
-  const memberErrors = newType.members.map((newMember, i) => {
-    const oldMember = oldType.members[i]
-    if (oldMember.label !== newMember.label) {
-      return `struct ${newType.label} had ${oldMember.label} in slot ${i}, now has ${newMember.label}`
-    }
-
-    if (oldMember.type !== newMember.type) {
-      return `struct ${newType.label}'s member ${newMember.label} changed type from ${oldMember.type} to ${newMember.type}`
-    }
-
-    return ''
-  }).filter(error => error !== '')
-
+export const generateCompatibilityReport = (
+  contractName: string,
+  oldArtifact: ContractValidation,
+  oldArtifacts: ValidationRunData,
+  newArtifact: ContractValidation,
+  newArtifacts: ValidationRunData
+): ASTStorageCompatibilityReport => {
+  const oldLayout = getLayout(oldArtifact, oldArtifacts)
+  const newLayout = getLayout(newArtifact, newArtifacts)
+  const comparator = new StorageLayoutComparator()
+  const diff = comparator.compareLayouts(oldLayout, newLayout)
   return {
-    same: memberErrors.length === 0,
-    errors: memberErrors
+    contract: contractName,
+    compatible: diff.pass,
+    errors: diff.explain(),
   }
 }
 
-const generateStructsCompatibilityReport = (oldLayout: StorageLayoutInfo, newLayout: StorageLayoutInfo) => {
-  let compatible = true
-  let errors = []
-
-  Object.keys(newLayout.types).forEach(typeName => {
-    const newType = newLayout.types[typeName]
-    const oldType = oldLayout.types[typeName]
-
-    if (newType.kind === 'struct' && oldType !== undefined) {
-      const structReport = compareStructDefinitions(oldType, newType)
-      if (!structReport.same) {
-        compatible = false
-        errors = errors.concat(structReport.errors)
-      }
-    }
-  })
-
-  return {
-    compatible,
-    errors
-  }
-}
-
-export const generateCompatibilityReport  = (oldArtifact: Artifact, oldArtifacts: BuildArtifacts,
-                       newArtifact: Artifact, newArtifacts: BuildArtifacts) => {
-      const oldLayout = getLayout(oldArtifact, oldArtifacts)
-      const newLayout = getLayout(newArtifact, newArtifacts)
-      const layoutReport = generateLayoutCompatibilityReport(oldLayout, newLayout)
-      const structsReport = generateStructsCompatibilityReport(oldLayout, newLayout)
-      return {
-        contract: newArtifact.contractName,
-        compatible: layoutReport.compatible && structsReport.compatible,
-        errors: layoutReport.errors.concat(structsReport.errors)
-      }
-}
-
-export const reportLayoutIncompatibilities = (oldArtifacts: BuildArtifacts, newArtifacts: BuildArtifacts): ASTStorageCompatibilityReport[] => {
-  return newArtifacts.listArtifacts().map((newArtifact) => {
-    const oldArtifact = oldArtifacts.getArtifactByName(newArtifact.contractName)
+export const reportLayoutIncompatibilities = (
+  oldArtifacts: ValidationRunData,
+  newArtifacts: ValidationRunData
+): ASTStorageCompatibilityReport[] => {
+  return Object.entries(newArtifacts).map(([newArtifactName, newArtifact]) => {
+    const oldArtifact = oldArtifacts[newArtifactName]
     if (oldArtifact !== undefined) {
-      return generateCompatibilityReport(oldArtifact, oldArtifacts, newArtifact, newArtifacts)
+      return generateCompatibilityReport(
+        newArtifactName,
+        oldArtifact,
+        oldArtifacts,
+        newArtifact,
+        newArtifacts
+      )
     } else {
       // Generate an empty report for new contracts, which are, by definition, backwards
       // compatible.
       return {
-        contract: newArtifact.contractName,
+        contract: newArtifactName,
         compatible: true,
-        errors: []
+        errors: '',
       }
     }
   })

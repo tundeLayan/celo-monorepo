@@ -1,7 +1,15 @@
 // tslint:disable: max-classes-per-file
 import { Artifact } from '@celo/protocol/lib/compatibility/internal'
-import { ContractVersion, ContractVersionChecker, ContractVersionCheckerIndex, ContractVersionDelta, ContractVersionDeltaIndex, ContractVersionIndex, DEFAULT_VERSION_STRING } from '@celo/protocol/lib/compatibility/version'
-import { BuildArtifacts } from '@openzeppelin/upgrades'
+import {
+  ContractVersion,
+  ContractVersionChecker,
+  ContractVersionCheckerIndex,
+  ContractVersionDelta,
+  ContractVersionDeltaIndex,
+  ContractVersionIndex,
+  DEFAULT_VERSION_STRING,
+} from '@celo/protocol/lib/compatibility/version'
+import { TruffleArtifact } from '@openzeppelin/upgrades'
 const VM = require('ethereumjs-vm').default
 const abi = require('ethereumjs-abi')
 
@@ -9,12 +17,14 @@ const abi = require('ethereumjs-abi')
  * A mapping {contract name => {@link ContractVersion}}.
  */
 export class ASTContractVersions {
-  static fromArtifacts = async (artifacts: BuildArtifacts): Promise<ASTContractVersions>=> {
+  static fromArtifacts = async (artifacts: TruffleArtifact[]): Promise<ASTContractVersions> => {
     const contracts = {}
 
-    await Promise.all(artifacts.listArtifacts().map(async (artifact) => {
-      contracts[artifact.contractName] = await getContractVersion(artifact)
-    }))
+    await Promise.all(
+      artifacts.listArtifacts().map(async (artifact) => {
+        contracts[artifact.contractName] = await getContractVersion(artifact)
+      })
+    )
     return new ASTContractVersions(contracts)
   }
 
@@ -39,7 +49,7 @@ export async function getContractVersion(artifact: Artifact): Promise<ContractVe
     caller: Buffer.from(nullAddress, 'hex'),
     code: Buffer.from(linkedBytecode.slice(2), 'hex'),
     static: true,
-    data: Buffer.from(data.slice(2), 'hex')
+    data: Buffer.from(data.slice(2), 'hex'),
   })
   if (result.execResult.exceptionError === undefined) {
     const value = result.execResult.returnValue
@@ -52,14 +62,26 @@ export async function getContractVersion(artifact: Artifact): Promise<ContractVe
 }
 
 export class ASTContractVersionsChecker {
-  static create = async (oldArtifacts: BuildArtifacts, newArtifacts: BuildArtifacts, expectedVersionDeltas: ContractVersionDeltaIndex): Promise<ASTContractVersionsChecker> => {
+  static create = async (
+    oldArtifacts: TruffleArtifact[],
+    newArtifacts: TruffleArtifact[],
+    expectedVersionDeltas: ContractVersionDeltaIndex
+  ): Promise<ASTContractVersionsChecker> => {
     const oldVersions = await ASTContractVersions.fromArtifacts(oldArtifacts)
     const newVersions = await ASTContractVersions.fromArtifacts(newArtifacts)
     const contracts = {}
-    Object.keys(newVersions.contracts).map((contract:string) => {
-      const versionDelta = expectedVersionDeltas[contract] === undefined ? ContractVersionDelta.fromChanges(false, false, false, false) : expectedVersionDeltas[contract]
-      const oldVersion = oldVersions.contracts[contract] === undefined ? null : oldVersions.contracts[contract]
-      contracts[contract] = new ContractVersionChecker(oldVersion, newVersions.contracts[contract], versionDelta)
+    Object.keys(newVersions.contracts).map((contract: string) => {
+      const versionDelta =
+        expectedVersionDeltas[contract] === undefined
+          ? ContractVersionDelta.fromChanges(false, false, false, false)
+          : expectedVersionDeltas[contract]
+      const oldVersion =
+        oldVersions.contracts[contract] === undefined ? null : oldVersions.contracts[contract]
+      contracts[contract] = new ContractVersionChecker(
+        oldVersion,
+        newVersions.contracts[contract],
+        versionDelta
+      )
     })
     return new ASTContractVersionsChecker(contracts)
   }
@@ -77,14 +99,15 @@ export class ASTContractVersionsChecker {
       return true
     }
     const contracts = {}
-    Object.keys(this.contracts).filter(included).map((contract: string) => {
-      contracts[contract] = this.contracts[contract]
-    })
+    Object.keys(this.contracts)
+      .filter(included)
+      .map((contract: string) => {
+        contracts[contract] = this.contracts[contract]
+      })
     return new ASTContractVersionsChecker(contracts)
   }
 
-
-  public mismatches = () : ASTContractVersionsChecker => {
+  public mismatches = (): ASTContractVersionsChecker => {
     const mismatches = {}
     Object.keys(this.contracts).map((contract: string) => {
       if (!this.contracts[contract].matches()) {

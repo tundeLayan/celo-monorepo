@@ -36,15 +36,15 @@ const deployProxiedContract = async (Contract: any, from: string) => {
 }
 
 contract('', (accounts) => {
-  const buildArtifacts = getTestArtifacts('linked_libraries')
-  const upgradedLibBuildArtifacts = getTestArtifacts('linked_libraries_upgraded_lib')
-  const upgradedContractBuildArtifacts = getTestArtifacts('linked_libraries_upgraded_contract')
-  const artifact = buildArtifacts.getArtifactByName('TestContract')
+  const TruffleArtifact = getTestArtifacts('linked_libraries')
+  const upgradedLibTruffleArtifact = getTestArtifacts('linked_libraries_upgraded_lib')
+  const upgradedContractTruffleArtifact = getTestArtifacts('linked_libraries_upgraded_contract')
+  const artifact = TruffleArtifact.getArtifactByName('TestContract')
 
-  const TestContract = makeTruffleContract(buildArtifacts.getArtifactByName('TestContract'))
-  const LinkedLibrary1 = makeTruffleContract(buildArtifacts.getArtifactByName('LinkedLibrary1'))
-  const LinkedLibrary2 = makeTruffleContract(buildArtifacts.getArtifactByName('LinkedLibrary2'))
-  const LinkedLibrary3 = makeTruffleContract(buildArtifacts.getArtifactByName('LinkedLibrary3'))
+  const TestContract = makeTruffleContract(TruffleArtifact.getArtifactByName('TestContract'))
+  const LinkedLibrary1 = makeTruffleContract(TruffleArtifact.getArtifactByName('LinkedLibrary1'))
+  const LinkedLibrary2 = makeTruffleContract(TruffleArtifact.getArtifactByName('LinkedLibrary2'))
+  const LinkedLibrary3 = makeTruffleContract(TruffleArtifact.getArtifactByName('LinkedLibrary3'))
 
   describe('LibraryPositions()', () => {
     it('collects the right number of positions for each library', () => {
@@ -123,7 +123,7 @@ contract('', (accounts) => {
 
     describe('verifyBytecodes', () => {
       it(`doesn't throw on matching contracts`, async () => {
-        await verifyBytecodes(['TestContract'], buildArtifacts, registry, [], Proxy, web3)
+        await verifyBytecodes(['TestContract'], TruffleArtifact, registry, [], Proxy, web3)
         assert(true)
       })
 
@@ -131,25 +131,25 @@ contract('', (accounts) => {
         const oldBytecode = artifact.deployedBytecode
         artifact.deployedBytecode = '0x0' + oldBytecode.slice(3, artifact.deployedBytecode.length)
         await assertThrowsAsync(
-          verifyBytecodes(['TestContract'], buildArtifacts, registry, [], Proxy, web3)
+          verifyBytecodes(['TestContract'], TruffleArtifact, registry, [], Proxy, web3)
         )
         artifact.deployedBytecode = oldBytecode
       })
 
       it(`throws when a library's bytecodes don't match`, async () => {
-        const libraryArtifact = buildArtifacts.getArtifactByName('LinkedLibrary1')
+        const libraryArtifact = TruffleArtifact.getArtifactByName('LinkedLibrary1')
         const oldBytecode = libraryArtifact.deployedBytecode
         libraryArtifact.deployedBytecode =
           oldBytecode.slice(0, 44) + '00' + oldBytecode.slice(46, oldBytecode.length)
         await assertThrowsAsync(
-          verifyBytecodes(['TestContract'], buildArtifacts, registry, [], Proxy, web3)
+          verifyBytecodes(['TestContract'], TruffleArtifact, registry, [], Proxy, web3)
         )
         libraryArtifact.deployedBytecode = oldBytecode
       })
 
       describe(`when a proposal upgrades a library's implementation`, () => {
         const LinkedLibrary3Upgraded = makeTruffleContract(
-          upgradedLibBuildArtifacts.getArtifactByName('LinkedLibrary3')
+          upgradedLibTruffleArtifact.getArtifactByName('LinkedLibrary3')
         )
         beforeEach(async () => {
           library3 = await LinkedLibrary3Upgraded.new({ from: accounts[0] })
@@ -171,7 +171,7 @@ contract('', (accounts) => {
 
           await verifyBytecodes(
             ['TestContract'],
-            upgradedLibBuildArtifacts,
+            upgradedLibTruffleArtifact,
             registry,
             proposal,
             Proxy,
@@ -191,7 +191,7 @@ contract('', (accounts) => {
           ]
 
           await assertThrowsAsync(
-            verifyBytecodes(['TestContract'], buildArtifacts, registry, proposal, Proxy, web3)
+            verifyBytecodes(['TestContract'], TruffleArtifact, registry, proposal, Proxy, web3)
           )
         })
 
@@ -206,14 +206,14 @@ contract('', (accounts) => {
           ]
 
           await assertThrowsAsync(
-            verifyBytecodes(['TestContract'], buildArtifacts, registry, proposal, Proxy, web3)
+            verifyBytecodes(['TestContract'], TruffleArtifact, registry, proposal, Proxy, web3)
           )
         })
       })
 
       describe(`when a proposal upgrades a contract's implementation`, () => {
         const TestContractUpgraded = makeTruffleContract(
-          upgradedContractBuildArtifacts.getArtifactByName('TestContract')
+          upgradedContractTruffleArtifact.getArtifactByName('TestContract')
         )
         beforeEach(async () => {
           TestContractUpgraded.link('LinkedLibrary1', library1.address)
@@ -233,7 +233,7 @@ contract('', (accounts) => {
 
           await verifyBytecodes(
             ['TestContract'],
-            upgradedContractBuildArtifacts,
+            upgradedContractTruffleArtifact,
             registry,
             proposal,
             Proxy,
@@ -253,7 +253,7 @@ contract('', (accounts) => {
           ]
 
           await assertThrowsAsync(
-            verifyBytecodes(['TestContract'], buildArtifacts, registry, proposal, Proxy, web3)
+            verifyBytecodes(['TestContract'], TruffleArtifact, registry, proposal, Proxy, web3)
           )
         })
 
@@ -268,7 +268,7 @@ contract('', (accounts) => {
           ]
 
           await assertThrowsAsync(
-            verifyBytecodes(['TestContract'], buildArtifacts, registry, proposal, Proxy, web3)
+            verifyBytecodes(['TestContract'], TruffleArtifact, registry, proposal, Proxy, web3)
           )
         })
 
@@ -278,7 +278,7 @@ contract('', (accounts) => {
           await assertThrowsAsync(
             verifyBytecodes(
               ['TestContract'],
-              upgradedContractBuildArtifacts,
+              upgradedContractTruffleArtifact,
               registry,
               proposal,
               Proxy,
@@ -290,7 +290,7 @@ contract('', (accounts) => {
 
       describe(`when a proposal changes a contract's proxy`, () => {
         const TestContractUpgraded = makeTruffleContract(
-          upgradedContractBuildArtifacts.getArtifactByName('TestContract')
+          upgradedContractTruffleArtifact.getArtifactByName('TestContract')
         )
         beforeEach(async () => {
           TestContractUpgraded.link('LinkedLibrary1', library1.address)
@@ -311,7 +311,7 @@ contract('', (accounts) => {
 
           await verifyBytecodes(
             ['TestContract'],
-            upgradedContractBuildArtifacts,
+            upgradedContractTruffleArtifact,
             registry,
             proposal,
             Proxy,
@@ -331,7 +331,7 @@ contract('', (accounts) => {
           ]
 
           await assertThrowsAsync(
-            verifyBytecodes(['TestContract'], buildArtifacts, registry, proposal, Proxy, web3)
+            verifyBytecodes(['TestContract'], TruffleArtifact, registry, proposal, Proxy, web3)
           )
         })
 
@@ -346,7 +346,7 @@ contract('', (accounts) => {
           ]
 
           await assertThrowsAsync(
-            verifyBytecodes(['TestContract'], buildArtifacts, registry, proposal, Proxy, web3)
+            verifyBytecodes(['TestContract'], TruffleArtifact, registry, proposal, Proxy, web3)
           )
         })
       })
@@ -364,7 +364,7 @@ contract('', (accounts) => {
         await assertThrowsAsync(
           verifyBytecodes(
             ['TestContract'],
-            upgradedContractBuildArtifacts,
+            upgradedContractTruffleArtifact,
             registry,
             proposal,
             Proxy,
