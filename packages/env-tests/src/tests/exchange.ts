@@ -3,7 +3,7 @@ import { describe, test } from '@jest/globals'
 import BigNumber from 'bignumber.js'
 import { EnvTestContext } from '../context'
 import {
-  fundAccountWithStableToken,
+  // fundAccountWithStableToken,
   getKey,
   initExchangeFromRegistry,
   initStableTokenFromRegistry,
@@ -11,87 +11,53 @@ import {
   TestAccounts,
 } from '../scaffold'
 
+// @ts-ignore
 export function runExchangeTest(context: EnvTestContext, stableTokensToTest: string[]) {
   describe('Exchange Test', () => {
-    const logger = context.logger.child({ test: 'exchange' })
+    test(`sell CELO for cEUR`, async () => {
+      /**
+       * This code simply exchanges CELO for cEUR using the RootAccount.
+       * It is intended to be used to fund the RootAccount with some cEUR that we can then use to run
+       * the general exchange & transfer env-tests from the master branch once cEUR is activated on mainnet.
+       */
 
-    for (const stableToken of stableTokensToTest) {
-      test(`exchange ${stableToken} for CELO`, async () => {
-        const stableTokenAmountToFund = ONE
-        await fundAccountWithStableToken(
-          context,
-          TestAccounts.Exchange,
-          stableTokenAmountToFund,
-          stableToken
+      const logger = context.logger
+      const root = await getKey(context.mnemonic, TestAccounts.Root)
+      context.kit.connection.addAccount(root.privateKey)
+      context.kit.defaultAccount = root.address
+
+      const goldToken = await context.kit.contracts.getGoldToken()
+      const exchange = await initExchangeFromRegistry('cEUR', context.kit)
+      const stableTokenInstance = await initStableTokenFromRegistry('cEUR', context.kit)
+
+      const initialcEURBalance = await stableTokenInstance.balanceOf(root.address)
+      logger.debug(`initial cEUR balance in rootAccount: ${initialcEURBalance}`)
+      const amountOfCeloToSell = ONE.times(2.5)
+
+      const stableTokenAmountExpected = await exchange.getBuyTokenAmount(amountOfCeloToSell, true)
+      logger.debug(`selling ${amountOfCeloToSell}, expecting ~${stableTokenAmountExpected} cEUR`)
+
+      const approveGoldTx = await goldToken
+        .approve(exchange.address, amountOfCeloToSell.toString())
+        .send()
+      await approveGoldTx.waitReceipt()
+      await sleep(5000)
+      logger.debug(`approved sell amount in the gold token contract, will now sell CELO`)
+
+      const sellGoldTx = await exchange
+        .sellGold(
+          amountOfCeloToSell,
+          stableTokenAmountExpected
+            .times(0.9)
+            .integerValue(BigNumber.ROUND_DOWN)
+            .toString()
         )
-        const stableTokenInstance = await initStableTokenFromRegistry(stableToken, context.kit)
-
-        const from = await getKey(context.mnemonic, TestAccounts.Exchange)
-        context.kit.connection.addAccount(from.privateKey)
-        context.kit.defaultAccount = from.address
-        context.kit.connection.defaultFeeCurrency = stableTokenInstance.address
-        const goldToken = await context.kit.contracts.getGoldToken()
-
-        const exchange = await initExchangeFromRegistry(stableToken, context.kit)
-        const previousGoldBalance = await goldToken.balanceOf(from.address)
-        const stableTokenAmountToSell = stableTokenAmountToFund.times(0.5)
-        const goldAmount = await exchange.getBuyTokenAmount(stableTokenAmountToSell, false)
-        logger.debug(
-          { rate: goldAmount.toString(), stabletoken: stableToken },
-          `quote selling ${stableToken}`
-        )
-
-        const approveTx = await stableTokenInstance
-          .approve(exchange.address, stableTokenAmountToSell.toString())
-          .send()
-        await approveTx.waitReceipt()
-        const sellTx = await exchange
-          .sell(
-            stableTokenAmountToSell,
-            // Allow 5% deviation from the quoted price
-            goldAmount
-              .times(0.95)
-              .integerValue(BigNumber.ROUND_DOWN)
-              .toString(),
-            false
-          )
-          .send()
-        await sellTx.getHash()
-        const receipt = await sellTx.waitReceipt()
-        logger.debug({ stabletoken: stableToken, receipt }, `Sold ${stableToken}`)
-
-        const goldAmountToSell = (await goldToken.balanceOf(from.address)).minus(
-          previousGoldBalance
-        )
-
-        logger.debug(
-          {
-            goldAmount: goldAmount.toString(),
-            goldAmountToSell: goldAmountToSell.toString(),
-            stabletoken: stableToken,
-          },
-          'Loss to exchange'
-        )
-
-        const approveGoldTx = await goldToken
-          .approve(exchange.address, goldAmountToSell.toString())
-          .send()
-        await approveGoldTx.waitReceipt()
-        await sleep(5000)
-        const sellGoldTx = await exchange
-          .sellGold(
-            goldAmountToSell,
-            // Assume we can get at least 80 % back
-            stableTokenAmountToSell
-              .times(0.8)
-              .integerValue(BigNumber.ROUND_DOWN)
-              .toString()
-          )
-          .send()
-        const sellGoldReceipt = await sellGoldTx.waitReceipt()
-
-        logger.debug({ stabletoken: stableToken, receipt: sellGoldReceipt }, 'Sold CELO')
-      })
-    }
+        .send()
+      const sellGoldReceipt = await sellGoldTx.waitReceipt()
+      logger.debug(`successfully exchanged with MENTO`)
+      const postcEURBalance = await stableTokenInstance.balanceOf(root.address)
+      logger.debug(`new cEUR balance in rootAccount: ${postcEURBalance}`)
+      logger.debug(sellGoldReceipt)
+    })
   })
 }

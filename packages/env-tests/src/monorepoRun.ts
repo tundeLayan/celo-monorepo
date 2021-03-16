@@ -2,12 +2,12 @@ import { newKitFromWeb3 } from '@celo/contractkit'
 import Web3 from 'web3'
 import { loadFromEnvFile } from './env'
 import { rootLogger } from './logger'
-import { clearAllFundsToRoot, StableTokenToRegistryName } from './scaffold'
-import { runAttestationTest } from './tests/attestation'
+import { StableTokenToRegistryName } from './scaffold'
+// import { runAttestationTest } from './tests/attestation'
 import { runExchangeTest } from './tests/exchange'
-import { runOracleTest } from './tests/oracle'
-import { runReserveTest } from './tests/reserve'
-import { runTransfersTest } from './tests/transfer'
+// import { runOracleTest } from './tests/oracle'
+// import { runReserveTest } from './tests/reserve'
+// import { runTransfersTest } from './tests/transfer'
 
 const DEFAULT_TOKENS_TO_TEST = ['cUSD']
 
@@ -38,17 +38,17 @@ function runTests() {
     }
 
     // TODO: Assert maximum loss after test
-    runTransfersTest(context, stableTokensToTest)
+    // runTransfersTest(context, stableTokensToTest)
     runExchangeTest(context, stableTokensToTest)
-    runOracleTest(context)
-    runReserveTest(context)
-    runAttestationTest(context)
+    // runOracleTest(context)
+    // runReserveTest(context)
+    // runAttestationTest(context)
 
     // TODO: Governance Proposals
     // TODO: Validator election + Slashing
 
     afterAll(async () => {
-      await clearAllFundsToRoot(context, stableTokensToTest)
+      // await clearAllFundsToRoot(context, stableTokensToTest)
     })
   })
 }
