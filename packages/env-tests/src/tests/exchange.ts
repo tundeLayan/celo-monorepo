@@ -32,7 +32,7 @@ export function runExchangeTest(context: EnvTestContext, stableTokensToTest: str
 
       const initialcEURBalance = await stableTokenInstance.balanceOf(root.address)
       logger.debug(`initial cEUR balance in rootAccount: ${initialcEURBalance}`)
-      const amountOfCeloToSell = ONE.times(2.5)
+      const amountOfCeloToSell = ONE.times(5)
 
       const stableTokenAmountExpected = await exchange.getBuyTokenAmount(amountOfCeloToSell, true)
       logger.debug(`selling ${amountOfCeloToSell}, expecting ~${stableTokenAmountExpected} cEUR`)
