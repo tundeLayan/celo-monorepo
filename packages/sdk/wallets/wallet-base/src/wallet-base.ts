@@ -118,6 +118,8 @@ export abstract class WalletBase<TSigner extends Signer> implements ReadOnlyWall
     const signer = this.getSigner(address)
     const sig = await signer.signTypedData(typedData)
 
+    console.log(sig)
+
     return ethUtil.toRpcSig(sig.v, sig.r, sig.s)
   }
 

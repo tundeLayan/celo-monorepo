@@ -102,18 +102,30 @@ export class LedgerSigner implements Signer {
 
   async signTypedData(typedData: EIP712TypedData): Promise<{ v: number; r: Buffer; s: Buffer }> {
     try {
-      const domainSeparator = structHash('EIP712Domain', typedData.domain, typedData.types)
+      const domainSeparator = structHash(
+        'EIP712Domain',
+        typedData.domain,
+        typedData.types
+      ).toString('hex')
       const hashStructMessage = structHash(
         typedData.primaryType,
         typedData.message,
         typedData.types
-      )
+      ).toString('hex')
+
+      const derivationPath = await this.getValidatedDerivationPath()
+
+      console.log(derivationPath)
+      console.log(domainSeparator)
+      console.log(hashStructMessage)
 
       const sig = await this.ledger!.signEIP712HashedMessage(
-        await this.getValidatedDerivationPath(),
+        derivationPath,
         domainSeparator,
         hashStructMessage
       )
+
+      console.log(sig)
 
       return {
         v: parseInt(sig.v, 10),
