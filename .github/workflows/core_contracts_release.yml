@@ -6,7 +6,7 @@ on:
     inputs:
       release_version:
         description: 'Version number of the release to be deployed'
-	required: true
+        required: true
       network:
         description: 'Network to deploy core contracts release on'
         required: true
