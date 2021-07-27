@@ -1,6 +1,6 @@
 // tslint:disable-next-line: no-reference (Required to make this work w/ ts-node)
 import { CeloTxPending, CeloTxReceipt, TransactionResult } from '@celo/connect'
-import { CeloContract, ContractKit, newKitFromWeb3 } from '@celo/contractkit'
+import { ContractKit, newKitFromWeb3 } from '@celo/contractkit'
 import { CeloTokenType, EachCeloToken, StableToken, Token } from '@celo/contractkit/lib/celo-tokens'
 import { eqAddress } from '@celo/utils/lib/address'
 import { toFixed } from '@celo/utils/lib/fixidity'
@@ -75,42 +75,6 @@ class InflationManager {
   }
 }
 
-const freeze = async (validatorUri: string, validatorAddress: string, token: CeloTokenType) => {
-  const kit = newKitFromWeb3(new Web3(validatorUri))
-  const tokenAddress = await kit.celoTokens.getAddress(token)
-  const freezer = await kit.contracts.getFreezer()
-  await freezer.freeze(tokenAddress).sendAndWaitForReceipt({ from: validatorAddress })
-}
-
-const unfreeze = async (validatorUri: string, validatorAddress: string, token: CeloTokenType) => {
-  const kit = newKitFromWeb3(new Web3(validatorUri))
-  const tokenAddress = await kit.celoTokens.getAddress(token)
-  const freezer = await kit.contracts.getFreezer()
-  await freezer.unfreeze(tokenAddress).sendAndWaitForReceipt({ from: validatorAddress })
-}
-
-const whitelistAddress = async (
-  validatorUri: string,
-  validatorAddress: string,
-  address: string
-) => {
-  const kit = newKitFromWeb3(new Web3(validatorUri))
-  const whitelistContract = await kit._web3Contracts.getTransferWhitelist()
-  await whitelistContract.methods.whitelistAddress(address).send({ from: validatorAddress })
-}
-
-const setAddressWhitelist = async (
-  validatorUri: string,
-  validatorAddress: string,
-  whitelist: string[]
-) => {
-  const kit = newKitFromWeb3(new Web3(validatorUri))
-  const whitelistContract = await kit._web3Contracts.getTransferWhitelist()
-  await whitelistContract.methods
-    .setDirectlyWhitelistedAddresses(whitelist)
-    .send({ from: validatorAddress, gas: 500000 })
-}
-
 const setIntrinsicGas = async (validatorUri: string, validatorAddress: string, gasCost: number) => {
   const kit = newKitFromWeb3(new Web3(validatorUri))
   const parameters = await kit.contracts.getBlockchainParameters()
@@ -161,20 +125,22 @@ async function newBalanceWatcher(kit: ContractKit, accounts: string[]): Promise<
       current = await fetch()
     },
     delta(address: string, token: CeloTokenType) {
-      return current[address][token].minus(initial[address][token])
+      return (current[address][token] || new BigNumber(0)).minus(initial[address][token] || 0)
     },
     current(address: string, token: CeloTokenType) {
-      return current[address][token]
+      return current[address][token] || new BigNumber(0)
     },
     initial(address: string, token: CeloTokenType) {
-      return initial[address][token]
+      return initial[address][token] || new BigNumber(0)
     },
     debugPrint(address: string, token: CeloTokenType) {
       // tslint:disable-next-line: no-console
       console.log({
-        initial: initial[address][token].toString(),
-        current: current[address][token].toString(),
-        delta: current[address][token].minus(initial[address][token]).toString(),
+        initial: initial[address][token]?.toString(),
+        current: current[address][token]?.toString(),
+        delta: (current[address][token] || new BigNumber(0))
+          .minus(initial[address][token] || 0)
+          .toString(),
       })
     },
   }
@@ -184,29 +150,27 @@ function assertEqualBN(value: BigNumber, expected: BigNumber) {
   assert.equal(value.toString(), expected.toString())
 }
 
-describe('Transfer tests', function(this: any) {
+describe('Transfer tests', function (this: any) {
   this.timeout(0)
 
   let kit: ContractKit
   const TransferAmount: BigNumber = new BigNumber(Web3.utils.toWei('1', 'ether'))
 
   let currentGethInstance: GethInstanceConfig
-  const expectedProposerBlockReward: string = new BigNumber(
-    Web3.utils.toWei('1', 'ether')
-  ).toString()
 
+  let governanceAddress: string // set later on using the contract itself
   const validatorAddress = '0x47e172f6cfb6c7d01c1574fa3e2be7cc73269d95'
   const DEF_FROM_PK = 'f2f48ee19680706196e2e339e5da3491186e0c4c5030670656b0e0164837257d'
   const FromAddress = '0x5409ed021d9299bf6814279a6a1411a7e866a631'
 
   // Arbitrary addresses.
-  const governanceAddress = '0x00000000000000000000000000000000DeaDBeef'
+  const txFeeRecipientAddress = '0x5555555555555555555555555555555555555555'
   const ToAddress = '0xbBae99F0E1EE565404465638d40827b54D343638'
-  const FeeRecipientAddress = '0x4f5f8a3f45d179553e7b95119ce296010f50f6f1'
+  const gatewayFeeRecipientAddress = '0x4f5f8a3f45d179553e7b95119ce296010f50f6f1'
 
   const syncModes = ['full', 'fast', 'light', 'lightest']
   const gethConfig: GethRunConfig = {
-    migrateTo: 20,
+    migrate: true,
     networkId: 1101,
     network: 'local',
     runPath: TMP_PATH,
@@ -218,6 +182,9 @@ describe('Transfer tests', function(this: any) {
       {
         name: 'validator',
         validating: true,
+        minerValidator: validatorAddress,
+        // Separate address for tx fees, so that we can easy identify balance changes due to them
+        txFeeRecipient: txFeeRecipientAddress,
         syncmode: 'full',
         port: 30303,
         rpcport: 8545,
@@ -227,12 +194,12 @@ describe('Transfer tests', function(this: any) {
 
   const hooks = getHooks(gethConfig)
 
-  before(async function(this: any) {
+  before(async function (this: any) {
     this.timeout(0)
     await hooks.before()
   })
 
-  after(async function(this: any) {
+  after(async function (this: any) {
     this.timeout(0)
     await hooks.after()
   })
@@ -248,8 +215,8 @@ describe('Transfer tests', function(this: any) {
     rpcport: 8547,
     // We need to set an etherbase here so that the full node will accept transactions from
     // light clients.
-    minerValidator: FeeRecipientAddress,
-    txFeeRecipient: FeeRecipientAddress,
+    minerValidator: gatewayFeeRecipientAddress,
+    txFeeRecipient: gatewayFeeRecipientAddress,
   }
 
   const restartWithCleanNodes = async () => {
@@ -272,13 +239,17 @@ describe('Transfer tests', function(this: any) {
       3
     )
 
-    // Install an arbitrary address as the goverance address to act as the infrastructure fund.
-    // This is chosen instead of full migration for speed and to avoid the need for a governance
-    // proposal, as all contracts are owned by governance once the migration is complete.
-    const registry = await kit._web3Contracts.getRegistry()
-    const tx = registry.methods.setAddressFor(CeloContract.Governance, governanceAddress)
-    const gas = await tx.estimateGas({ from: validatorAddress })
-    await tx.send({ from: validatorAddress, gas })
+    governanceAddress = (await kit._web3Contracts.getGovernance()).options.address
+    // The tests below check the balance of the governance contract (i.e. the community fund)
+    // before and after transactions to verify the correct amount has been received from the fees.
+    // This causes flakiness due to the fund also receiving epoch rewards (if the epoch change is
+    // between the blocks the balance checker uses as its before and after the test will fail due
+    // to the unexpected change from the epoch rewards).
+    // To avoid this, we set the community fund's fraction of epoch rewards to zero.
+    // Another option would have been to make the epoch size large enough so no epoch changes happen
+    // during the test.
+    const epochRewards = await kit._web3Contracts.getEpochRewards()
+    await epochRewards.methods.setCommunityRewardFraction(0).send({ from: validatorAddress })
 
     // Give the account we will send transfers as sufficient gold and dollars.
     const startBalance = TransferAmount.times(500)
@@ -524,8 +495,8 @@ describe('Transfer tests', function(this: any) {
       const accounts = [
         fromAddress,
         toAddress,
-        validatorAddress,
-        FeeRecipientAddress,
+        txFeeRecipientAddress,
+        gatewayFeeRecipientAddress,
         governanceAddress,
       ]
       balances = await newBalanceWatcher(kit, accounts)
@@ -604,19 +575,15 @@ describe('Transfer tests', function(this: any) {
     }
 
     it(`should increment the gateway fee recipient's ${feeToken} balance by the gateway fee`, () =>
-      assertEqualBN(balances.delta(FeeRecipientAddress, feeToken), txRes.fees.gateway))
+      assertEqualBN(balances.delta(gatewayFeeRecipientAddress, feeToken), txRes.fees.gateway))
 
     it(`should increment the infrastructure fund's ${feeToken} balance by the base portion of the gas fee`, () =>
       assertEqualBN(balances.delta(governanceAddress, feeToken), txRes.fees.base))
 
-    it(`should increment the proposers's ${feeToken} balance by the rest of the gas fee`, () => {
-      assertEqualBN(
-        balances.delta(validatorAddress, feeToken).mod(expectedProposerBlockReward),
-        txRes.fees.tip
-      )
+    it(`should increment the tx fee recipient's ${feeToken} balance by the rest of the gas fee`, () => {
+      assertEqualBN(balances.delta(txFeeRecipientAddress, feeToken), txRes.fees.tip)
     })
   }
-
   describe('Normal Transfer >', () => {
     before(restartWithCleanNodes)
 
@@ -631,7 +598,7 @@ describe('Transfer tests', function(this: any) {
                 const recipient = (choice: string) => {
                   switch (choice) {
                     case 'peer':
-                      return FeeRecipientAddress
+                      return gatewayFeeRecipientAddress
                     case 'random':
                       return Web3.utils.randomHex(20)
                     default:
@@ -834,8 +801,7 @@ describe('Transfer tests', function(this: any) {
               balances = await newBalanceWatcher(kit, [
                 FromAddress,
                 ToAddress,
-                validatorAddress,
-                FeeRecipientAddress,
+                gatewayFeeRecipientAddress,
                 governanceAddress,
               ])
 
@@ -879,8 +845,8 @@ describe('Transfer tests', function(this: any) {
             it("should halve the gateway fee recipient's Celo Dollar balance then increase it by the gateway fee", () => {
               assertEqualBN(
                 balances
-                  .current(FeeRecipientAddress, StableToken.cUSD)
-                  .minus(balances.initial(FeeRecipientAddress, StableToken.cUSD).idiv(2)),
+                  .current(gatewayFeeRecipientAddress, StableToken.cUSD)
+                  .minus(balances.initial(gatewayFeeRecipientAddress, StableToken.cUSD).idiv(2)),
                 expectedFees.gateway
               )
             })
@@ -892,88 +858,6 @@ describe('Transfer tests', function(this: any) {
                   .minus(balances.initial(governanceAddress, StableToken.cUSD).idiv(2)),
                 expectedFees.base
               )
-            })
-          })
-        })
-      })
-    }
-  })
-
-  describe('Transfers Frozen >', () => {
-    before(restartWithCleanNodes)
-
-    for (const syncMode of syncModes) {
-      describe(`${syncMode} Node >`, () => {
-        before(`start geth on sync: ${syncMode}`, () => startSyncNode(syncMode))
-
-        describe('when CeloGold is frozen', () => {
-          before('ensure gold transfers are frozen', async () => {
-            await freeze('http://localhost:8545', validatorAddress, Token.CELO)
-          })
-
-          describe('check if frozen', () => {
-            it('should be frozen', async () => {
-              const goldTokenAddress = await kit.celoTokens.getAddress(Token.CELO)
-              const freezer = await kit.contracts.getFreezer()
-              const isFrozen = await freezer.isFrozen(goldTokenAddress)
-              assert(isFrozen)
-            })
-          })
-          describe('when neither sender nor receiver is whitelisted', () => {
-            before('ensure neither sender nor receiver is whitelisted', async () => {
-              await setAddressWhitelist('http://localhost:8545', validatorAddress, [])
-            })
-            testTxPoolFiltering({
-              gas: INTRINSIC_TX_GAS_COST + ADDITIONAL_INTRINSIC_TX_GAS_COST,
-              feeToken: StableToken.cUSD,
-              expectedError: 'Error: transfers are currently frozen',
-            })
-          })
-          describe('when receiver is whitelisted', () => {
-            it('should transfer succesfully', async () => {
-              const whitelistedAddress = await kit.registry.addressFor(CeloContract.LockedGold)
-              testTransferToken({
-                expectedGas: INTRINSIC_TX_GAS_COST + ADDITIONAL_INTRINSIC_TX_GAS_COST,
-                transferToken: Token.CELO,
-                feeToken: Token.CELO,
-                toAddress: whitelistedAddress,
-              })
-            })
-          })
-          describe('when sender is whitelisted', () => {
-            before('add sender to transfer whitelist', async () => {
-              await whitelistAddress('http://localhost:8545', validatorAddress, FromAddress)
-            })
-            it('should transfer succesfully', async () => {
-              testTransferToken({
-                expectedGas: INTRINSIC_TX_GAS_COST + ADDITIONAL_INTRINSIC_TX_GAS_COST,
-                transferToken: Token.CELO,
-                feeToken: Token.CELO,
-              })
-            })
-
-            describe('when sender is removed again from whitelist', () => {
-              before('remove sender from whitelist', async () => {
-                await setAddressWhitelist('http://localhost:8545', validatorAddress, [])
-              })
-              testTxPoolFiltering({
-                gas: INTRINSIC_TX_GAS_COST + ADDITIONAL_INTRINSIC_TX_GAS_COST,
-                feeToken: Token.CELO,
-                expectedError: 'Error: transfers are currently frozen',
-              })
-            })
-          })
-
-          describe('when gold transfers are unfrozen again', async () => {
-            before('unfreeze gold transfers', async () => {
-              await unfreeze('http://localhost:8545', validatorAddress, Token.CELO)
-            })
-            it('should transfer normally', async () => {
-              testTransferToken({
-                expectedGas: INTRINSIC_TX_GAS_COST + ADDITIONAL_INTRINSIC_TX_GAS_COST,
-                transferToken: Token.CELO,
-                feeToken: Token.CELO,
-              })
             })
           })
         })

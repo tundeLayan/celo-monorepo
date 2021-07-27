@@ -4,10 +4,9 @@ import {
   GetContactMatchesRequest,
   hasValidAccountParam,
   hasValidContactPhoneNumbersParam,
+  hasValidIdentifier,
   hasValidUserPhoneNumberParam,
-  isBodyReasonablySized,
   isVerified,
-  phoneNumberHashIsValidIfExists,
   WarningMessage,
 } from '@celo/phone-number-privacy-common'
 import Logger from 'bunyan'
@@ -22,7 +21,6 @@ interface ContactMatch {
   phoneNumber: string
 }
 
-// TODO (amyslawson) consider pagination or streaming of contacts?
 export async function handleGetContactMatches(
   request: Request<{}, {}, GetContactMatchesRequest>,
   response: Response
@@ -73,8 +71,6 @@ function isValidGetContactMatchesInput(requestBody: GetContactMatchesRequest): b
     hasValidAccountParam(requestBody) &&
     hasValidUserPhoneNumberParam(requestBody) &&
     hasValidContactPhoneNumbersParam(requestBody) &&
-    !!requestBody.hashedPhoneNumber &&
-    phoneNumberHashIsValidIfExists(requestBody) &&
-    isBodyReasonablySized(requestBody)
+    hasValidIdentifier(requestBody)
   )
 }

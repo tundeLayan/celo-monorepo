@@ -1,5 +1,6 @@
 import { CeloContract } from './base'
 import { StableToken } from './celo-tokens'
+import { Ierc20 } from './generated/IERC20'
 import { ContractKit } from './kit'
 import { AccountsWrapper } from './wrappers/Accounts'
 import { AttestationsWrapper } from './wrappers/Attestations'
@@ -7,6 +8,7 @@ import { BlockchainParametersWrapper } from './wrappers/BlockchainParameters'
 import { DoubleSigningSlasherWrapper } from './wrappers/DoubleSigningSlasher'
 import { DowntimeSlasherWrapper } from './wrappers/DowntimeSlasher'
 import { ElectionWrapper } from './wrappers/Election'
+import { Erc20Wrapper } from './wrappers/Erc20Wrapper'
 // import { EpochRewardsWrapper } from './wrappers/EpochRewards'
 import { EscrowWrapper } from './wrappers/Escrow'
 import { ExchangeWrapper } from './wrappers/Exchange'
@@ -14,6 +16,7 @@ import { FreezerWrapper } from './wrappers/Freezer'
 import { GasPriceMinimumWrapper } from './wrappers/GasPriceMinimum'
 import { GoldTokenWrapper } from './wrappers/GoldTokenWrapper'
 import { GovernanceWrapper } from './wrappers/Governance'
+import { GrandaMentoWrapper } from './wrappers/GrandaMento'
 import { LockedGoldWrapper } from './wrappers/LockedGold'
 import { MetaTransactionWalletWrapper } from './wrappers/MetaTransactionWallet'
 import { MetaTransactionWalletDeployerWrapper } from './wrappers/MetaTransactionWalletDeployer'
@@ -31,6 +34,7 @@ const WrapperFactories = {
   [CeloContract.DowntimeSlasher]: DowntimeSlasherWrapper,
   [CeloContract.Election]: ElectionWrapper,
   // [CeloContract.EpochRewards]?: EpochRewardsWrapper,
+  [CeloContract.ERC20]: Erc20Wrapper,
   [CeloContract.Escrow]: EscrowWrapper,
   [CeloContract.Exchange]: ExchangeWrapper,
   [CeloContract.ExchangeEUR]: ExchangeWrapper,
@@ -39,6 +43,7 @@ const WrapperFactories = {
   [CeloContract.GasPriceMinimum]: GasPriceMinimumWrapper,
   [CeloContract.GoldToken]: GoldTokenWrapper,
   [CeloContract.Governance]: GovernanceWrapper,
+  [CeloContract.GrandaMento]: GrandaMentoWrapper,
   [CeloContract.LockedGold]: LockedGoldWrapper,
   // [CeloContract.Random]: RandomWrapper,
   // [CeloContract.Registry]: RegistryWrapper,
@@ -63,6 +68,7 @@ interface WrapperCacheMap {
   [CeloContract.DowntimeSlasher]?: DowntimeSlasherWrapper
   [CeloContract.Election]?: ElectionWrapper
   // [CeloContract.EpochRewards]?: EpochRewardsWrapper
+  [CeloContract.ERC20]?: Erc20Wrapper<Ierc20>
   [CeloContract.Escrow]?: EscrowWrapper
   [CeloContract.Exchange]?: ExchangeWrapper
   [CeloContract.ExchangeEUR]?: ExchangeWrapper
@@ -71,6 +77,7 @@ interface WrapperCacheMap {
   [CeloContract.GasPriceMinimum]?: GasPriceMinimumWrapper
   [CeloContract.GoldToken]?: GoldTokenWrapper
   [CeloContract.Governance]?: GovernanceWrapper
+  [CeloContract.GrandaMento]?: GrandaMentoWrapper
   [CeloContract.LockedGold]?: LockedGoldWrapper
   [CeloContract.MetaTransactionWallet]?: MetaTransactionWalletWrapper
   [CeloContract.MetaTransactionWalletDeployer]?: MetaTransactionWalletDeployerWrapper
@@ -115,6 +122,9 @@ export class WrapperCache {
   // getEpochRewards() {
   //   return this.getContract(CeloContract.EpochRewards)
   // }
+  getErc20(address: string) {
+    return this.getContract(CeloContract.ERC20, address)
+  }
   getEscrow() {
     return this.getContract(CeloContract.Escrow)
   }
@@ -135,6 +145,9 @@ export class WrapperCache {
   }
   getGovernance() {
     return this.getContract(CeloContract.Governance)
+  }
+  getGrandaMento() {
+    return this.getContract(CeloContract.GrandaMento)
   }
   getLockedGold() {
     return this.getContract(CeloContract.LockedGold)

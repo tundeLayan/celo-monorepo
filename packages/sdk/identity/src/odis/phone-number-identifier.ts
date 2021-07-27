@@ -49,6 +49,7 @@ export async function getPhoneNumberIdentifier(
     throw new Error(`Invalid phone number: ${e164Number}`)
   }
   // Fallback to using Wasm version if not specified
+
   if (!blsBlindingClient) {
     debug('No BLSBlindingClient found, using WasmBlsBlindingClient')
     blsBlindingClient = new WasmBlsBlindingClient(context.odisPubKey)
@@ -98,7 +99,6 @@ export async function getBlindedPhoneNumberSignature(
 ): Promise<string> {
   const body: SignMessageRequest = {
     account,
-    timestamp: Date.now(),
     blindedQueryPhoneNumber: base64BlindedMessage,
     hashedPhoneNumber: selfPhoneHash,
     version: clientVersion ? clientVersion : 'unknown',
@@ -140,10 +140,7 @@ export async function getPhoneNumberIdentifierFromSignature(
 // It simply hashes it with sha256 and encodes it to hex
 export function getPepperFromThresholdSignature(sigBuf: Buffer) {
   // Currently uses 13 chars for a 78 bit pepper
-  return createHash('sha256')
-    .update(sigBuf)
-    .digest('base64')
-    .slice(0, PEPPER_CHAR_LENGTH)
+  return createHash('sha256').update(sigBuf).digest('base64').slice(0, PEPPER_CHAR_LENGTH)
 }
 
 /**

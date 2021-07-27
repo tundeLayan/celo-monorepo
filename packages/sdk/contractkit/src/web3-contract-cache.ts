@@ -16,6 +16,8 @@ import { newFreezer } from './generated/Freezer'
 import { newGasPriceMinimum } from './generated/GasPriceMinimum'
 import { newGoldToken } from './generated/GoldToken'
 import { newGovernance } from './generated/Governance'
+import { newGrandaMento } from './generated/GrandaMento'
+import { newIerc20 } from './generated/IERC20'
 import { newLockedGold } from './generated/LockedGold'
 import { newMetaTransactionWallet } from './generated/MetaTransactionWallet'
 import { newMetaTransactionWalletDeployer } from './generated/MetaTransactionWalletDeployer'
@@ -40,6 +42,7 @@ export const ContractFactories = {
   [CeloContract.DowntimeSlasher]: newDowntimeSlasher,
   [CeloContract.Election]: newElection,
   [CeloContract.EpochRewards]: newEpochRewards,
+  [CeloContract.ERC20]: newIerc20,
   [CeloContract.Escrow]: newEscrow,
   [CeloContract.Exchange]: newExchange,
   [CeloContract.ExchangeEUR]: newExchangeEur,
@@ -48,6 +51,7 @@ export const ContractFactories = {
   [CeloContract.GasPriceMinimum]: newGasPriceMinimum,
   [CeloContract.GoldToken]: newGoldToken,
   [CeloContract.Governance]: newGovernance,
+  [CeloContract.GrandaMento]: newGrandaMento,
   [CeloContract.LockedGold]: newLockedGold,
   [CeloContract.MetaTransactionWallet]: newMetaTransactionWallet,
   [CeloContract.MetaTransactionWalletDeployer]: newMetaTransactionWalletDeployer,
@@ -98,6 +102,9 @@ export class Web3ContractCache {
   getEpochRewards() {
     return this.getContract(CeloContract.EpochRewards)
   }
+  getErc20(address: string) {
+    return this.getContract(CeloContract.ERC20, address)
+  }
   getEscrow() {
     return this.getContract(CeloContract.Escrow)
   }
@@ -118,6 +125,9 @@ export class Web3ContractCache {
   }
   getGovernance() {
     return this.getContract(CeloContract.Governance)
+  }
+  getGrandaMento() {
+    return this.getContract(CeloContract.GrandaMento)
   }
   getLockedGold() {
     return this.getContract(CeloContract.LockedGold)
@@ -158,6 +168,14 @@ export class Web3ContractCache {
    */
   async getContract<C extends keyof typeof ContractFactories>(contract: C, address?: string) {
     if (this.cacheMap[contract] == null || address !== undefined) {
+      // core contract in the registry
+      if (!address) {
+        try {
+          address = await this.kit.registry.addressFor(contract)
+        } catch (e) {
+          throw new Error(`${contract} not yet deployed for this chain`)
+        }
+      }
       debug('Initiating contract %s', contract)
       const createFn = ProxyContracts.includes(contract)
         ? newProxy
@@ -165,10 +183,9 @@ export class Web3ContractCache {
         ? (ContractFactories[contract] as CFType[C])
         : newProxy
       // @ts-ignore: Too complex union type
-      this.cacheMap[contract] = createFn(
-        this.kit.connection.web3,
-        address ?? (await this.kit.registry.addressFor(contract))
-      ) as NonNullable<ContractCacheMap[C]>
+      this.cacheMap[contract] = createFn(this.kit.connection.web3, address) as NonNullable<
+        ContractCacheMap[C]
+      >
     }
     // we know it's defined (thus the !)
     return this.cacheMap[contract]!

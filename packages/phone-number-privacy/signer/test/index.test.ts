@@ -11,14 +11,9 @@ import {
   createMockWeb3,
 } from '../../common/src/test/utils'
 import { BLINDED_PHONE_NUMBER } from '../../common/src/test/values'
-import { REQUEST_EXPIRY_WINDOW_MS } from '../../common/src/utils/constants'
 import { computeBlindedSignature } from '../src/bls/bls-cryptography-client'
 import { DEV_PRIVATE_KEY, getVersion } from '../src/config'
-import {
-  getDidMatchmaking,
-  incrementQueryCount,
-  setDidMatchmaking,
-} from '../src/database/wrappers/account'
+import { incrementQueryCount } from '../src/database/wrappers/account'
 import { getRequestExists, storeRequest } from '../src/database/wrappers/request'
 import { getKeyProvider } from '../src/key-management/key-provider'
 import { createServer } from '../src/server'
@@ -47,8 +42,6 @@ const mockComputeBlindedSignature = computeBlindedSignature as jest.Mock
 
 jest.mock('../src/database/wrappers/account')
 const mockIncrementQueryCount = incrementQueryCount as jest.Mock
-const mockGetDidMatchmaking = getDidMatchmaking as jest.Mock
-const mockSetDidMatchmaking = setDidMatchmaking as jest.Mock
 
 jest.mock('../src/database/wrappers/request')
 const mockStoreRequest = storeRequest as jest.Mock
@@ -76,8 +69,6 @@ describe(`POST /getBlindedMessageSignature endpoint`, () => {
     mockGetKeyProvider.mockReturnValue({ getPrivateKey: jest.fn(() => DEV_PRIVATE_KEY) })
     mockComputeBlindedSignature.mockReturnValue(BLS_SIGNATURE)
     mockIncrementQueryCount.mockReturnValue(true)
-    mockGetDidMatchmaking.mockReturnValue(false)
-    mockSetDidMatchmaking.mockImplementation()
     mockStoreRequest.mockReturnValue(true)
     mockGetRequestExists.mockReturnValue(false)
     mockGetWalletAddress.mockResolvedValue('0x0')
@@ -87,7 +78,6 @@ describe(`POST /getBlindedMessageSignature endpoint`, () => {
     blindedQueryPhoneNumber: BLINDED_PHONE_NUMBER,
     hashedPhoneNumber: '0x5f6e88c3f724b3a09d3194c0514426494955eff7127c29654e48a361a19b4b96',
     account: '0x78dc5D2D739606d31509C31d654056A45185ECb6',
-    timestamp: Date.now(),
   }
 
   describe('with valid input', () => {
@@ -97,6 +87,27 @@ describe(`POST /getBlindedMessageSignature endpoint`, () => {
       request(app)
         .post('/getBlindedMessagePartialSig')
         .send(validRequest)
+        .expect('Content-Type', /json/)
+        .expect(
+          200,
+          {
+            success: true,
+            signature: BLS_SIGNATURE,
+            version: getVersion(),
+            performedQueryCount: 1,
+            totalQuota: 10,
+            blockNumber: 10000,
+          },
+          done
+        )
+    })
+    // Backwards compatibility check
+    it('provides signature w/ expired timestamp', (done) => {
+      mockGetRemainingQueryCount.mockResolvedValue({ performedQueryCount: 0, totalQuota: 10 })
+      mockGetBlockNumber.mockResolvedValue(10000)
+      request(app)
+        .post('/getBlindedMessagePartialSig')
+        .send({ ...validRequest, timestamp: Date.now() - 10 * 60 * 1000 }) // 10 minutes ago
         .expect('Content-Type', /json/)
         .expect(
           200,
@@ -210,10 +221,7 @@ describe(`POST /getBlindedMessageSignature endpoint`, () => {
         account: 'd31509C31d654056A45185ECb6',
       }
 
-      request(app)
-        .post('/getBlindedMessagePartialSig')
-        .send(mockRequestData)
-        .expect(400, done)
+      request(app).post('/getBlindedMessagePartialSig').send(mockRequestData).expect(400, done)
     })
 
     it('invalid hashedPhoneNumber returns 400', (done) => {
@@ -222,22 +230,7 @@ describe(`POST /getBlindedMessageSignature endpoint`, () => {
         hashedPhoneNumber: '+1234567890',
       }
 
-      request(app)
-        .post('/getBlindedMessagePartialSig')
-        .send(mockRequestData)
-        .expect(400, done)
-    })
-
-    it('expired timestamp returns 400', (done) => {
-      const mockRequestData = {
-        ...validRequest,
-        timestamp: Date.now() - REQUEST_EXPIRY_WINDOW_MS,
-      }
-
-      request(app)
-        .post('/getBlindedMessagePartialSig')
-        .send(mockRequestData)
-        .expect(400, done)
+      request(app).post('/getBlindedMessagePartialSig').send(mockRequestData).expect(400, done)
     })
 
     it('invalid blinded phone number returns 400', (done) => {
@@ -246,10 +239,7 @@ describe(`POST /getBlindedMessageSignature endpoint`, () => {
         blindedQueryPhoneNumber: '1234567890',
       }
 
-      request(app)
-        .post('/getBlindedMessagePartialSig')
-        .send(mockRequestData)
-        .expect(400, done)
+      request(app).post('/getBlindedMessagePartialSig').send(mockRequestData).expect(400, done)
     })
   })
 })

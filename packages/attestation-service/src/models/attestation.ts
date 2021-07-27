@@ -24,6 +24,8 @@ export interface AttestationModel extends Model {
   recordError: (error: string) => void
   failure: () => boolean
   currentError: () => string | undefined
+  appSignature: string | undefined
+  language: string | undefined
 }
 
 export interface AttestationKey {
@@ -64,18 +66,20 @@ export default (sequelize: Sequelize) => {
     errors: DataTypes.STRING,
     createdAt: DataTypes.DATE,
     completedAt: DataTypes.DATE,
+    appSignature: DataTypes.STRING,
+    language: DataTypes.STRING,
   }) as AttestationStatic
 
-  model.prototype.key = function(): AttestationKey {
+  model.prototype.key = function (): AttestationKey {
     return { account: this.account, identifier: this.identifier, issuer: this.issuer }
   }
 
-  model.prototype.provider = function(): string | null {
+  model.prototype.provider = function (): string | null {
     const pl = this.providers.split(',')
     return this.providers ? pl[this.attempt % pl.length] : null
   }
 
-  model.prototype.recordError = function(error: string) {
+  model.prototype.recordError = function (error: string) {
     const errors = this.errors ? JSON.parse(this.errors) : {}
 
     errors[this.attempt] = {
@@ -85,7 +89,7 @@ export default (sequelize: Sequelize) => {
     this.errors = JSON.stringify(errors)
   }
 
-  model.prototype.failure = function(): boolean {
+  model.prototype.failure = function (): boolean {
     return (
       // tslint:disable-next-line: triple-equals
       this.status == AttestationStatus.NotSent.valueOf() ||
@@ -94,7 +98,7 @@ export default (sequelize: Sequelize) => {
     )
   }
 
-  model.prototype.currentError = function() {
+  model.prototype.currentError = function () {
     if (this.failure()) {
       const errors = this.errors ? JSON.parse(this.errors) : {}
       return errors[this.attempt]?.error ?? errors[this.attempt - 1]?.error ?? undefined

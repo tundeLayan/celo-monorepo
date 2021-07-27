@@ -37,7 +37,7 @@ export const handler = async (argv: TestnetInitialArgv) => {
   failIfVmBased()
 
   const createdCluster = await createClusterIfNotExists()
-  await switchToClusterFromEnv()
+  await switchToClusterFromEnv(argv.celoEnv)
 
   if (!argv.skipClusterSetup) {
     await setupCluster(argv.celoEnv, createdCluster)
@@ -49,6 +49,6 @@ export const handler = async (argv: TestnetInitialArgv) => {
   if (!isCelotoolHelmDryRun()) {
     // When using an external bootnode, we have to await the bootnode's LB to be up first
     await pollForBootnodeLoadBalancer(argv.celoEnv)
-    await uploadTestnetInfoToGoogleStorage(argv.celoEnv, !argv.useExistingGenesis)
+    await uploadTestnetInfoToGoogleStorage(argv.celoEnv)
   }
 }

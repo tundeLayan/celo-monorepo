@@ -1,15 +1,19 @@
 import { execCmdWithExitOnFailure } from './cmd-utils'
-import { outputIncludes, switchToProjectFromEnv } from './utils'
+import { outputIncludes, switchToGCPProject, switchToProjectFromEnv } from './utils'
 
 // createServiceAccountIfNotExists creates a service account with the given name
 // if it does not exist. Returns if the account was created.
-export async function createServiceAccountIfNotExists(name: string) {
-  await switchToProjectFromEnv()
+export async function createServiceAccountIfNotExists(name: string, gcloudProject?: string) {
+  if (gcloudProject !== undefined) {
+    await switchToGCPProject(gcloudProject)
+  } else {
+    await switchToProjectFromEnv()
+  }
   // TODO: add permissions for cloudsql editor to service account
   const serviceAccountExists = await outputIncludes(
     `gcloud iam service-accounts list`,
     name,
-    `Service account ${name} exists, skipping creation`
+    `GCP Service account ${name} exists, skipping creation`
   )
   if (!serviceAccountExists) {
     await execCmdWithExitOnFailure(

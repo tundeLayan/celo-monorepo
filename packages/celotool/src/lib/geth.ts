@@ -19,6 +19,7 @@ import { envVar, fetchEnv, isVmBased } from './env-utils'
 import {
   AccountType,
   generateGenesis,
+  generateGenesisWithMigrations,
   generatePrivateKey,
   privateKeyToPublicKey,
   Validator,
@@ -735,29 +736,20 @@ export async function initAndStartGeth(
   instance: GethInstanceConfig,
   verbose: boolean
 ) {
-  const datadir = getDatadir(gethConfig.runPath, instance)
-
-  if (verbose) {
-    console.info(`geth:${instance.name}: init datadir ${datadir}`)
-  }
-
-  const genesisPath = path.join(gethConfig.runPath, 'genesis.json')
-  await init(gethBinaryPath, datadir, genesisPath, verbose)
-
-  if (instance.privateKey) {
-    await importPrivateKey(gethConfig, gethBinaryPath, instance, verbose)
-  }
-
+  await initGeth(gethConfig, gethBinaryPath, instance, verbose)
   return startGeth(gethConfig, gethBinaryPath, instance, verbose)
 }
 
-export async function init(
+export async function initGeth(
+  gethConfig: GethRunConfig,
   gethBinaryPath: string,
-  datadir: string,
-  genesisPath: string,
+  instance: GethInstanceConfig,
   verbose: boolean
 ) {
+  const datadir = getDatadir(gethConfig.runPath, instance)
+  const genesisPath = path.join(gethConfig.runPath, 'genesis.json')
   if (verbose) {
+    console.info(`geth:${instance.name}: init datadir ${datadir}`)
     console.log(`init geth with genesis at ${genesisPath}`)
   }
 
@@ -765,6 +757,9 @@ export async function init(
   await spawnCmdWithExitOnFailure(gethBinaryPath, ['--datadir', datadir, 'init', genesisPath], {
     silent: !verbose,
   })
+  if (instance.privateKey) {
+    await importPrivateKey(gethConfig, gethBinaryPath, instance, verbose)
+  }
 }
 
 export async function importPrivateKey(
@@ -894,8 +889,6 @@ export async function startGeth(
   if (instance.validating && !minerValidator) {
     throw new Error('miner.validator address from the instance is required')
   }
-  // TODO(ponti): add flag after Donut fork
-  // const txFeeRecipient = instance.txFeeRecipient || minerValidator
   const verbosity = gethConfig.verbosity ? gethConfig.verbosity : '3'
 
   instance.args = [
@@ -907,7 +900,6 @@ export async function startGeth(
     '--metrics',
     '--port',
     port.toString(),
-    '--rpcvhosts=*',
     '--networkid',
     gethConfig.networkId.toString(),
     `--verbosity=${verbosity}`,
@@ -920,32 +912,28 @@ export async function startGeth(
   ]
 
   if (minerValidator) {
-    instance.args.push(
-      '--etherbase', // TODO(ponti): change to '--miner.validator' after deprecating the 'etherbase' flag
-      minerValidator
-    )
-    // TODO(ponti): add flag after Donut fork
-    // '--tx-fee-recipient',
-    // txFeeRecipient
+    const txFeeRecipient = instance.txFeeRecipient || minerValidator
+    instance.args.push('--miner.validator', minerValidator, '--tx-fee-recipient', txFeeRecipient)
   }
 
   if (rpcport) {
     instance.args.push(
-      '--rpc',
-      '--rpcport',
+      '--http',
+      '--http.port',
       rpcport.toString(),
-      '--rpccorsdomain=*',
-      '--rpcapi=eth,net,web3,debug,admin,personal,txpool,istanbul'
+      '--http.corsdomain=*',
+      '--http.vhosts=*',
+      '--http.api=eth,net,web3,debug,admin,personal,txpool,istanbul'
     )
   }
 
   if (wsport) {
     instance.args.push(
-      '--wsorigins=*',
       '--ws',
-      '--wsport',
+      '--ws.origins=*',
+      '--ws.port',
       wsport.toString(),
-      '--wsapi=eth,net,web3,debug,admin,personal,txpool,istanbul'
+      '--ws.api=eth,net,web3,debug,admin,personal,txpool,istanbul'
     )
   }
 
@@ -1050,6 +1038,9 @@ export async function startGeth(
     }
   }
 
+  // Geth startup isn't fully done even when the port is open, so give it another second
+  await sleep(1000)
+
   console.log(
     `${instance.name}: running.`,
     rpcport ? `RPC: ${rpcport}` : '',
@@ -1084,6 +1075,41 @@ export function writeGenesis(gethConfig: GethRunConfig, validators: Validator[],
   }
 }
 
+export async function writeGenesisWithMigrations(
+  gethConfig: GethRunConfig,
+  gethRepoPath: string,
+  mnemonic: string,
+  numValidators: number,
+  verbose: boolean = false
+) {
+  const genesis: string = await generateGenesisWithMigrations({
+    gethRepoPath,
+    mnemonic,
+    numValidators,
+    verbose,
+    genesisConfig: {
+      blockTime: 1,
+      epoch: 10,
+      lookbackwindow: 3,
+      requestTimeout: 3000,
+      chainId: gethConfig.networkId,
+      ...gethConfig.genesisConfig,
+    },
+  })
+
+  const genesisPath = path.join(gethConfig.runPath, 'genesis.json')
+
+  if (verbose) {
+    console.log('writing genesis')
+  }
+
+  fs.writeFileSync(genesisPath, genesis)
+
+  if (verbose) {
+    console.log(`wrote genesis to ${genesisPath}`)
+  }
+}
+
 export async function snapshotDatadir(
   runPath: string,
   instance: GethInstanceConfig,
@@ -1114,6 +1140,10 @@ export async function restoreDatadir(runPath: string, instance: GethInstanceConf
 
 export async function buildGeth(gethPath: string) {
   await spawnCmdWithExitOnFailure('make', ['geth'], { cwd: gethPath })
+}
+
+export async function buildGethAll(gethPath: string) {
+  await spawnCmdWithExitOnFailure('make', ['all'], { cwd: gethPath })
 }
 
 export async function resetDataDir(dataDir: string, verbose: boolean) {

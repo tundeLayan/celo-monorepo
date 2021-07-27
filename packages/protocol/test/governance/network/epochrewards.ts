@@ -81,7 +81,7 @@ contract('EpochRewards', (accounts: string[]) => {
   const carbonOffsettingPartner = '0x0000000000000000000000000000000000000000'
   const targetValidatorEpochPayment = new BigNumber(10000000000000)
   const exchangeRate = 7
-  const sortedOraclesDenominator = new BigNumber('0x10000000000000000')
+  const sortedOraclesDenominator = new BigNumber('1000000000000000000000000')
   const timeTravelToDelta = async (timeDelta: BigNumber) => {
     // mine beforehand, just in case
     await jsonRpc(web3, 'evm_mine', [])
@@ -100,8 +100,8 @@ contract('EpochRewards', (accounts: string[]) => {
     mockGoldToken = await MockGoldToken.new()
     mockStableToken = await MockStableToken.new()
     mockSortedOracles = await MockSortedOracles.new()
-    freezer = await Freezer.new()
-    registry = await Registry.new()
+    freezer = await Freezer.new(true)
+    registry = await Registry.new(true)
     await registry.setAddressFor(CeloContractName.Election, mockElection.address)
     await registry.setAddressFor(CeloContractName.Freezer, freezer.address)
     await registry.setAddressFor(CeloContractName.GoldToken, mockGoldToken.address)
@@ -582,7 +582,7 @@ contract('EpochRewards', (accounts: string[]) => {
     let reserve: ReserveInstance
 
     beforeEach(async () => {
-      reserve = await Reserve.new()
+      reserve = await Reserve.new(true)
       await registry.setAddressFor(CeloContractName.Reserve, reserve.address)
       await reserve.initialize(
         registry.address,
@@ -760,7 +760,7 @@ contract('EpochRewards', (accounts: string[]) => {
 
     beforeEach(async () => {
       const totalSupply = new BigNumber(129762987346298761037469283746)
-      reserve = await Reserve.new()
+      reserve = await Reserve.new(true)
       await registry.setAddressFor(CeloContractName.Reserve, reserve.address)
       await reserve.initialize(
         registry.address,
@@ -780,14 +780,8 @@ contract('EpochRewards', (accounts: string[]) => {
         web3.utils.padRight(web3.utils.utf8ToHex('empty'), 64),
       ]
       const assetAllocationWeights = [
-        new BigNumber(10)
-          .pow(24)
-          .dividedBy(new BigNumber(2))
-          .integerValue(),
-        new BigNumber(10)
-          .pow(24)
-          .dividedBy(new BigNumber(2))
-          .integerValue(),
+        new BigNumber(10).pow(24).dividedBy(new BigNumber(2)).integerValue(),
+        new BigNumber(10).pow(24).dividedBy(new BigNumber(2)).integerValue(),
       ]
       await reserve.setAssetAllocations(assetAllocationSymbols, assetAllocationWeights)
     })
@@ -795,11 +789,7 @@ contract('EpochRewards', (accounts: string[]) => {
     describe('reserve ratio of 0.5', () => {
       beforeEach(async () => {
         const stableBalance = new BigNumber(2397846127684712867321)
-        const goldBalance = stableBalance
-          .div(exchangeRate)
-          .div(2)
-          .times(0.5)
-          .integerValue()
+        const goldBalance = stableBalance.div(exchangeRate).div(2).times(0.5).integerValue()
         await mockStableToken.setTotalSupply(stableBalance)
         await web3.eth.sendTransaction({
           from: accounts[9],
@@ -833,11 +823,7 @@ contract('EpochRewards', (accounts: string[]) => {
     describe('reserve ratio of 1.5', () => {
       beforeEach(async () => {
         const stableBalance = new BigNumber(2397846127684712867321)
-        const goldBalance = stableBalance
-          .div(exchangeRate)
-          .div(2)
-          .times(1.5)
-          .integerValue()
+        const goldBalance = stableBalance.div(exchangeRate).div(2).times(1.5).integerValue()
         await mockStableToken.setTotalSupply(stableBalance)
         await web3.eth.sendTransaction({
           from: accounts[9],
@@ -878,11 +864,7 @@ contract('EpochRewards', (accounts: string[]) => {
     describe('reserve ratio of 2.5', () => {
       beforeEach(async () => {
         const stableBalance = new BigNumber(2397846127684712867321)
-        const goldBalance = stableBalance
-          .div(exchangeRate)
-          .div(2)
-          .times(2.5)
-          .integerValue()
+        const goldBalance = stableBalance.div(exchangeRate).div(2).times(2.5).integerValue()
         await mockStableToken.setTotalSupply(stableBalance)
         await web3.eth.sendTransaction({
           from: accounts[9],

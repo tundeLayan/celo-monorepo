@@ -1,6 +1,5 @@
 import { isVerified } from '@celo/phone-number-privacy-common'
 import { Request, Response } from 'firebase-functions'
-import { REQUEST_EXPIRY_WINDOW_MS } from '../../common/src/utils/constants'
 import { BLSCryptographyClient } from '../src/bls/bls-cryptography-client'
 import { VERSION } from '../src/config'
 import { getTransaction } from '../src/database/database'
@@ -23,7 +22,7 @@ const mockComputeBlindedSignature = jest.fn()
 BLSCryptographyClient.prototype.combinePartialBlindedSignatures = mockComputeBlindedSignature
 mockComputeBlindedSignature.mockResolvedValue(BLS_SIGNATURE)
 const mockSufficientVerifiedSigs = jest.fn()
-BLSCryptographyClient.prototype.hasSufficientVerifiedSignatures = mockSufficientVerifiedSigs
+BLSCryptographyClient.prototype.hasSufficientSignatures = mockSufficientVerifiedSigs
 mockSufficientVerifiedSigs.mockReturnValue(true)
 
 jest.mock('../src/database/wrappers/account')
@@ -73,7 +72,6 @@ describe(`POST /getBlindedMessageSig endpoint`, () => {
     blindedQueryPhoneNumber: BLINDED_PHONE_NUMBER,
     hashedPhoneNumber: '0x5f6e88c3f724b3a09d3194c0514426494955eff7127c29654e48a361a19b4b96',
     account: '0x78dc5D2D739606d31509C31d654056A45185ECb6',
-    timestamp: Date.now(),
   }
 
   beforeEach(() => {
@@ -147,17 +145,6 @@ describe(`POST /getBlindedMessageSig endpoint`, () => {
 
       getBlindedMessageSig(req, invalidResponseExpected(done, 400))
     })
-    it('expired timestamp returns 400', (done) => {
-      const req = {
-        body: {
-          ...validRequest,
-          timestamp: Date.now() - REQUEST_EXPIRY_WINDOW_MS,
-        },
-        headers: mockHeaders,
-      } as Request
-
-      getBlindedMessageSig(req, invalidResponseExpected(done, 400))
-    })
     it('invalid blinded phone number returns 400', (done) => {
       const req = {
         body: {
@@ -174,8 +161,8 @@ describe(`POST /getBlindedMessageSig endpoint`, () => {
 
 describe(`POST /getContactMatches endpoint`, () => {
   const validInput = {
-    userPhoneNumber: '+14155550123',
-    contactPhoneNumbers: ['+14155550123'],
+    userPhoneNumber: 'o+EZnvfWS3K9X1krfcuH68Ueg1OPzqSnTyFzgtpCGlY=',
+    contactPhoneNumbers: ['aXq4I31oe0pSQtl8nq7vTorY9ehCz0z0pN0UMePWK9Y='],
     account: '0x78dc5D2D739606d31509C31d654056A45185ECb6',
     hashedPhoneNumber: '0x5f6e88c3f724b3a09d3194c0514426494955eff7127c29654e48a361a19b4b96',
   }
@@ -270,6 +257,18 @@ describe(`POST /getContactMatches endpoint`, () => {
       getContactMatches(req, invalidResponseExpected(done, 400))
     })
 
+    it('invalid user number returns 400', (done) => {
+      const req = {
+        body: {
+          ...validInput,
+          userPhoneNumber: '+14155550123',
+        },
+        headers: mockHeaders,
+      } as Request
+
+      getContactMatches(req, invalidResponseExpected(done, 400))
+    })
+
     it('invalid account returns 400', (done) => {
       const req = {
         body: {
@@ -299,6 +298,18 @@ describe(`POST /getContactMatches endpoint`, () => {
         body: {
           ...validInput,
           contactPhoneNumbers: [],
+        },
+        headers: mockHeaders,
+      } as Request
+
+      getContactMatches(req, invalidResponseExpected(done, 400))
+    })
+
+    it('invalid contact phone numbers returns 400', (done) => {
+      const req = {
+        body: {
+          ...validInput,
+          contactPhoneNumbers: ['+14155550123'],
         },
         headers: mockHeaders,
       } as Request

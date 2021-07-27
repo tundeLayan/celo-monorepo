@@ -6,6 +6,11 @@
 ## Getting Started
 
 - [Choosing a Network](getting-started/choosing-a-network.md)
+- [Wallets](getting-started/wallets.md)
+  - [Using MetaMask with Celo](getting-started/using-metamask-with-celo/README.md)
+    - [Manual Setup](getting-started/using-metamask-with-celo/manual-setup.md)
+    - [Programmatic Setup](getting-started/using-metamask-with-celo/programmatic-setup.md)
+    - [Using a Ledger with MetaMask](getting-started/using-metamask-with-celo/using-a-ledger-with-metamask.md)
 - [Mainnet](getting-started/mainnet.md)
   - [Running a Validator](getting-started/running-a-validator-in-mainnet.md)
   - [Running a Full Node](getting-started/running-a-full-node-in-mainnet.md)
@@ -28,6 +33,7 @@
 - [Understanding ReleaseGold](celo-holder-guide/release-gold.md)
 - [Voting for Validator Groups](celo-holder-guide/voting-validators.md)
 - [Voting on Governance](celo-holder-guide/voting-governance.md)
+- [Governance Cheat Sheet](celo-holder-guide/governance-cheat-sheet.md)
 - [Recovering CELO from an Ethereum Address](celo-holder-guide/eth-recovery.md)
 - [Recovering ETH from a Celo Address](celo-holder-guide/celo-recovery.md)
 
@@ -45,6 +51,7 @@
 - [Running Proxies](validator-guide/proxy.md)
 - [Validator Explorer](validator-guide/validator-explorer.md)
 - [Celo Foundation Voting Policy](validator-guide/celo-foundation-voting-policy.md)
+- [Celo Signal](validator-guide/celo-signal.md)
 
 ## Developer Guide
 
@@ -56,21 +63,23 @@
   - [DappKit Truffle Box](developer-resources/walkthroughs/hello-mobile-dapp.md)
   - [Using Windows](developer-resources/develop-on-windows.md)
   - [React based DApp](developer-resources/walkthroughs/web-dapp.md)
-  <!-- - [Building a dApp with Contracts on Celo]() -->
-  <!-- - [The Celo Protocol]()
-    - [Architecture]()
-    - [Similarities with Ethereum]()
-    - [Difference between Ethereum and Celo]()
-      - [Mobile First]()
-      - [Architectural Differences]()
-        - [Validators, full node, light node]()
-      - [Protocol Differences]()
-        - [TX object - link to transactions]()
-        - [fees in dollars- link to Paying for Gas in Tokens]()
-      - [Development Differences]()
-    - [dApps on Celo]()
-      - [What is a dApp?]() -->
-    <!-- - [Architecture]() -->
+  - [WalletConnect](developer-resources/walkthroughs/wallet-connect.md)
+  - [Using Keystores](developer-resources/walkthroughs/using-js-keystores.md)
+    <!-- - [Building a dApp with Contracts on Celo]() -->
+    <!-- - [The Celo Protocol]()
+      - [Architecture]()
+      - [Similarities with Ethereum]()
+      - [Difference between Ethereum and Celo]()
+        - [Mobile First]()
+        - [Architectural Differences]()
+          - [Validators, full node, light node]()
+        - [Protocol Differences]()
+          - [TX object - link to transactions]()
+          - [fees in dollars- link to Paying for Gas in Tokens]()
+        - [Development Differences]()
+      - [dApps on Celo]()
+        - [What is a dApp?]() -->
+      <!-- - [Architecture]() -->
 - [ContractKit](developer-resources/contractkit/README.md)
   - [Setup](developer-resources/contractkit/setup.md)
   - [Using the kit](developer-resources/contractkit/usage.md)
@@ -496,7 +505,7 @@
       - [ParsedBlock](developer-resources/explorer/reference/interfaces/_block_explorer_.parsedblock.md)
       - [ParsedTx](developer-resources/explorer/reference/interfaces/_block_explorer_.parsedtx.md)
     <!-- explorer-reference-end -->
-  
+
   - [Governance](developer-resources/governance/reference/SUMMARY.md)
     <!-- governance-reference-start -->
     - [Globals](developer-resources/governance/reference/globals.md)
@@ -612,6 +621,29 @@
       - [PrivateAccessor](developer-resources/identity/reference/interfaces/_offchain_accessors_interfaces_.privateaccessor.md)
       - [PublicAccessor](developer-resources/identity/reference/interfaces/_offchain_accessors_interfaces_.publicaccessor.md)
     <!-- identity-reference-end -->
+
+  - [Keystores](developer-resources/keystores/reference/../../../SUMMARY.md)
+    <!-- keystores-reference-start -->
+    - [Globals](developer-resources/keystores/reference/globals.md)
+    - [Modules]()
+      - [file-keystore](developer-resources/keystores/reference/modules/_file_keystore_.md)
+      - [FileKeystore](developer-resources/keystores/reference/classes/_file_keystore_.filekeystore.md)
+      - [inmemory-keystore](developer-resources/keystores/reference/modules/_inmemory_keystore_.md)
+      - [InMemoryKeystore](developer-resources/keystores/reference/classes/_inmemory_keystore_.inmemorykeystore.md)
+      - [keystore-base](developer-resources/keystores/reference/modules/_keystore_base_.md)
+      - [ErrorMessages](developer-resources/keystores/reference/enums/_keystore_base_.errormessages.md)
+      - [KeystoreBase](developer-resources/keystores/reference/classes/_keystore_base_.keystorebase.md)
+      - [keystore-wallet-wrapper](developer-resources/keystores/reference/modules/_keystore_wallet_wrapper_.md)
+      - [KeystoreWalletWrapper](developer-resources/keystores/reference/classes/_keystore_wallet_wrapper_.keystorewalletwrapper.md)
+      - [test-constants](developer-resources/keystores/reference/modules/_test_constants_.md)
+    - [Classes]()
+      - [FileKeystore](developer-resources/keystores/reference/classes/_file_keystore_.filekeystore.md)
+      - [InMemoryKeystore](developer-resources/keystores/reference/classes/_inmemory_keystore_.inmemorykeystore.md)
+      - [KeystoreBase](developer-resources/keystores/reference/classes/_keystore_base_.keystorebase.md)
+      - [KeystoreWalletWrapper](developer-resources/keystores/reference/classes/_keystore_wallet_wrapper_.keystorewalletwrapper.md)
+    - [Enums]()
+      - [ErrorMessages](developer-resources/keystores/reference/enums/_keystore_base_.errormessages.md)
+    <!-- keystores-reference-end -->
 
   - [Network-Utils](developer-resources/network-utils/reference/SUMMARY.md)
     <!-- network-utils-reference-start -->
@@ -886,9 +918,10 @@
     - [Penalties](celo-codebase/protocol/proof-of-stake/penalties.md)
   - [Governance](celo-codebase/protocol/governance.md)
   - [Stability Mechanism](celo-codebase/protocol/stability/README.md)
-    - [Stability Algorithm \(CP-DOTO\)](celo-codebase/protocol/stability/doto.md)
+    - [Stability Algorithm \(Mento\)](celo-codebase/protocol/stability/doto.md)
     - [Oracles](celo-codebase/protocol/stability/oracles.md)
     - [Stability Fees](celo-codebase/protocol/stability/stability-fees.md)
+    - [Adding Stable Tokens](celo-codebase/protocol/stability/adding_stable_assets.md)
     - [Tobin Tax](celo-codebase/protocol/stability/tobin-tax.md)
   - [Transactions](celo-codebase/protocol/transactions/README.md)
     - [Native Currency](celo-codebase/protocol/transactions/native-currency.md)
@@ -898,9 +931,11 @@
     - [Encrypted Payment Comments](celo-codebase/protocol/transactions/tx-comment-encyption.md)
     - [Full Node Incentives](celo-codebase/protocol/transactions/full-node-incentives.md)
   - [Identity](celo-codebase/protocol/identity/README.md)
+    - [Valora Accounts](celo-codebase/protocol/identity/valora-accounts.md)
     - [Phone Number Privacy](celo-codebase/protocol/identity/phone-number-privacy.md)
     - [Metadata](celo-codebase/protocol/identity/metadata.md)
     - [Randomness](celo-codebase/protocol/identity/randomness.md)
+  - [Optics](celo-codebase/protocol/optics.md)
   - [Plumo Ultralight Sync](celo-codebase/protocol/plumo.md)
 - [Celo Wallet](celo-codebase/wallet/README.md)
   - [Running the Wallet Locally](celo-codebase/wallet/intro.md)

@@ -9,9 +9,7 @@ import { deployModule, destroyModule } from './vm-testnet-utils'
 const FORNO_TERRAFORM_MODULE_NAME = 'forno'
 
 export async function deployForno(celoEnv: string) {
-  const contexts: string[] = fetchEnv(envVar.FORNO_FULL_NODE_CONTEXTS)
-    .split(',')
-    .map(coerceContext)
+  const contexts: string[] = fetchEnv(envVar.FORNO_FULL_NODE_CONTEXTS).split(',').map(coerceContext)
   console.info('Deploying Forno with full node contexts:', contexts)
   const terraformVars: TerraformVars = await getFornoTerraformVars(celoEnv, contexts)
   // This prints the global IP address for forno
@@ -22,9 +20,7 @@ export async function deployForno(celoEnv: string) {
 }
 
 export async function destroyForno(celoEnv: string) {
-  const contexts: string[] = fetchEnv(envVar.FORNO_FULL_NODE_CONTEXTS)
-    .split(',')
-    .map(coerceContext)
+  const contexts: string[] = fetchEnv(envVar.FORNO_FULL_NODE_CONTEXTS).split(',').map(coerceContext)
   console.info('DESTROYING Forno')
   const terraformVars: TerraformVars = await getFornoTerraformVars(celoEnv, contexts)
   await destroyModule(celoEnv, FORNO_TERRAFORM_MODULE_NAME, terraformVars)
@@ -96,15 +92,17 @@ async function getFornoTerraformVars(celoEnv: string, contexts: string[]): Promi
   const WS_RPC_PORT = 8546
   const contextInfosHttp = await getContextInfos(HTTP_RPC_PORT)
   const contextInfosWs = await getContextInfos(WS_RPC_PORT)
+  const bannedCIDRs = fetchEnv(envVar.FORNO_BANNED_CIDR).split(',')
 
   return {
-    backend_max_requests_per_second: '300',
+    backend_max_requests_per_second: '100',
     celo_env: celoEnv,
     context_info_http: JSON.stringify(contextInfosHttp),
     context_info_ws: JSON.stringify(contextInfosWs),
     gcloud_credentials_path: fetchEnv(envVar.GOOGLE_APPLICATION_CREDENTIALS),
     gcloud_project: gcloudProject!,
     ssl_cert_domains: JSON.stringify(domains),
+    banned_cidr: JSON.stringify(bannedCIDRs),
     vpc_network_name: fetchEnv(envVar.FORNO_VPC_NETWORK_NAME),
   }
 }

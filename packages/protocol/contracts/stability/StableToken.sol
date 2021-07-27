@@ -41,6 +41,8 @@ contract StableToken is
 
   event TransferComment(string comment);
 
+  bytes32 constant GRANDA_MENTO_REGISTRY_ID = keccak256(abi.encodePacked("GrandaMento"));
+
   string internal name_;
   string internal symbol_;
   uint8 internal decimals_;
@@ -67,7 +69,8 @@ contract StableToken is
 
   InflationState inflationState;
 
-  // for differentiating between corresponding fiat pairs
+  // The registry ID of the exchange contract with permission to mint and burn this token.
+  // Unique per StableToken instance.
   bytes32 exchangeRegistryId;
 
   /**
@@ -93,8 +96,14 @@ contract StableToken is
    * @return The storage, major, minor, and patch version of the contract.
    */
   function getVersionNumber() external pure returns (uint256, uint256, uint256, uint256) {
-    return (1, 2, 0, 0);
+    return (1, 2, 0, 1);
   }
+
+  /**
+   * @notice Sets initialized == true on implementation contracts
+   * @param test Set to true to skip implementation initialization
+   */
+  constructor(bool test) public Initializable(test) {}
 
   /**
    * @param _name The name of the stable token (English)
@@ -223,8 +232,9 @@ contract StableToken is
   function mint(address to, uint256 value) external updateInflationFactor returns (bool) {
     require(
       msg.sender == registry.getAddressForOrDie(getExchangeRegistryId()) ||
-        msg.sender == registry.getAddressFor(VALIDATORS_REGISTRY_ID),
-      "Only the Exchange and Validators contracts are authorized to mint"
+        msg.sender == registry.getAddressFor(VALIDATORS_REGISTRY_ID) ||
+        msg.sender == registry.getAddressFor(GRANDA_MENTO_REGISTRY_ID),
+      "Sender not authorized to mint"
     );
     return _mint(to, value);
   }
@@ -269,12 +279,12 @@ contract StableToken is
    * @notice Burns StableToken from the balance of msg.sender.
    * @param value The amount of StableToken to burn.
    */
-  function burn(uint256 value)
-    external
-    onlyRegisteredContract(getExchangeRegistryId())
-    updateInflationFactor
-    returns (bool)
-  {
+  function burn(uint256 value) external updateInflationFactor returns (bool) {
+    require(
+      msg.sender == registry.getAddressForOrDie(getExchangeRegistryId()) ||
+        msg.sender == registry.getAddressFor(GRANDA_MENTO_REGISTRY_ID),
+      "Sender not authorized to burn"
+    );
     uint256 units = _valueToUnits(inflationState.factor, value);
     require(units <= balances[msg.sender], "value exceeded balance of sender");
     totalSupply_ = totalSupply_.sub(units);
@@ -392,6 +402,10 @@ contract StableToken is
   /**
    * @notice Returns the exchange id in the registry of the corresponding fiat pair exchange.
    * @dev When this storage is uninitialized, it falls back to the default EXCHANGE_REGISTRY_ID.
+   * exchangeRegistryId was introduced after the initial release of cUSD's StableToken,
+   * so exchangeRegistryId will be uninitialized for that contract. If cUSD's StableToken
+   * exchangeRegistryId were to be correctly initialized, this function could be deprecated
+   * in favor of using exchangeRegistryId directly.
    * @return Registry id for the corresponding exchange.
    */
   function getExchangeRegistryId() public view returns (bytes32) {
