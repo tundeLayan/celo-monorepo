@@ -21,4 +21,26 @@ library ExternalCall {
     require(success, "Transaction execution failed.");
     return returnData;
   }
+
+  // TODO
+  /**
+   * @notice Executes external call.
+   * @param destination The address to call.
+   * @param value The CELO value to be sent.
+   * @param data The data to be sent.
+   * @return The call return value.
+   */
+  function executeWithRefund(address destination, uint256 value, bytes memory data)
+    internal
+    returns (bytes memory)
+  {
+    // TODO
+    if (data.length > 0) require(Address.isContract(destination), "Invalid contract address");
+    bool success;
+    bytes memory returnData;
+    (success, returnData) = destination.call.value(value)(data).gas(); // TODO
+    require(success, "Transaction execution failed.");
+    // TODO add refund
+    return returnData;
+  }
 }
