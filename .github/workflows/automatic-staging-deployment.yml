@@ -3,7 +3,7 @@ name: Release to Staging
 on:
   push:
     branches:
-      - main
+      - emilhotkowski/release-process
 
 jobs:
   Release-to-Staging:
