@@ -1,0 +1,1 @@
+echo "Releasing ODIS to $ENV_NAME"
