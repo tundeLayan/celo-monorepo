@@ -44,7 +44,7 @@ jobs:
           for changed_package in ${{steps.changedPackages.outputs.changed_packages}}
           do
             echo "*** Releasing ${changed_package} package ***"
-            ./packages/${changed_package}/release/deployment.sh
+            sudo ./packages/${changed_package}/release/deployment.sh
           done
         env:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
