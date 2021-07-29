@@ -1,1 +1,1 @@
-echo "Releasing ODIS to $ENV_NAME!"
+echo "Releasing ODIS to $ENV_NAME"
