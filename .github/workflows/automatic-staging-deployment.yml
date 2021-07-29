@@ -1,0 +1,46 @@
+name: Release to Staging
+
+on:
+  push:
+    branches:
+      - emilhotkowski/release-process
+
+jobs:
+  Release-to-STG:
+    runs-on: ubuntu-latest
+    environment: Staging
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - id: files
+        uses: jitterbit/get-changed-files@v1
+        name: Retrieve all changed files from the push
+      - uses: nick-invision/retry@v2
+        name: Release only changed packages
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: |
+            changed_packages=()
+            for changed_file in ${{ steps.files.outputs.all }}; do
+
+              #check if changed file is under "packages/" folder
+              if [[ $changed_file == packages* ]]; then
+
+                #extract packge name
+                package_name=`sudo echo ${changed_file} | sed 's/packages\/\([^ \/]*\).*/\1/'`
+
+                changed_packages+=($package_name)
+              fi
+            done
+            dedup_changed_packages=( $(printf '%s\n' "${changed_packages[@]}" | sort -u) )
+
+            for changed_package in "${dedup_changed_packages[@]}"
+            do
+              echo "*** Releasing ${changed_package} package ***"
+              ./packages/${changed_package}/release/deployment.sh
+            done
