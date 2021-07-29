@@ -19,10 +19,10 @@ jobs:
         uses: jitterbit/get-changed-files@v1
         name: Retrieve all changed files from the push
       - name: Set up gcloud Cloud SDK environment
-          uses: google-github-actions/setup-gcloud@94337306dda8180d967a56932ceb4ddcf01edae7
-          with:
-            service_account_key: ${{ secrets.GCP_SA_KEY }} # optional
-            project_id: ${{ secrets.GCP_PROJECT_ID }} # optional
+        uses: google-github-actions/setup-gcloud@94337306dda8180d967a56932ceb4ddcf01edae7
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }} # optional
+          project_id: ${{ secrets.GCP_PROJECT_ID }} # optional
       - id: changedPackages
         name: Generate list of changed packages
         shell: bash
