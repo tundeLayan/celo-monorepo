@@ -33,12 +33,14 @@ contract MetaTransactionWallet is
   event WalletRecovered(address indexed newSigner);
   event EIP712DomainSeparatorSet(bytes32 eip712DomainSeparator);
   event Deposit(address indexed sender, uint256 value);
+
   event TransactionExecution(
     address indexed destination,
     uint256 value,
     bytes data,
     bytes returnData
   );
+
   event MetaTransactionExecution(
     address indexed destination,
     uint256 value,
@@ -185,9 +187,10 @@ contract MetaTransactionWallet is
    * @param value The CELO value to be sent with the meta-transaction.
    * @param data The data to be sent with the meta-transaction.
    * @param _nonce The nonce for this meta-transaction local to this wallet.
-   * @param maxGasPrice Maximum gas price the user is willing to pay
-   * @param metaGasLimit Gas limit for just MetaTransaction
-   * @param gasCurrency Currency user specifies gas will be paid in
+   * @param maxGasPrice The maximum gas price the user is willing to pay.
+   * @param gasLimit The gas limit for entire relayed transaction.
+   * @param metaGasLimit The gas limit for just the meta-transaction.
+   * @param gasCurrency The currency user specifies gas will be paid in.
    * @return The digest of the provided meta-transaction.
    */
   function _getRefundableMetaTransactionStructHash(
@@ -259,11 +262,15 @@ contract MetaTransactionWallet is
   }
 
   /**
-   * @notice Returns the address that signed the provided meta-transaction.
+   * @notice Returns the address that signed the provided refundable meta-transaction.
    * @param destination The address to which the meta-transaction is to be sent.
    * @param value The CELO value to be sent with the meta-transaction.
    * @param data The data to be sent with the meta-transaction.
    * @param _nonce The nonce for this meta-transaction local to this wallet.
+   * @param maxGasPrice The maximum gas price the user is willing to pay.
+   * @param gasLimit The gas limit for entire relayed transaction.
+   * @param metaGasLimit The gas limit for just the meta-transaction.
+   * @param gasCurrency The currency user specifies gas will be paid in.
    * @param v The recovery id of the ECDSA signature of the meta-transaction.
    * @param r Output value r of the ECDSA signature.
    * @param s Output value s of the ECDSA signature.
@@ -320,10 +327,14 @@ contract MetaTransactionWallet is
   */
 
   /**
-   * @notice Executes a meta-transaction on behalf of the signer.
+   * @notice Executes a refundable meta-transaction on behalf of the signer.
    * @param destination The address to which the meta-transaction is to be sent.
    * @param value The CELO value to be sent with the meta-transaction.
    * @param data The data to be sent with the meta-transaction.
+   * @param maxGasPrice The maximum gas price the user is willing to pay.
+   * @param gasLimit The gas limit for entire relayed transaction.
+   * @param metaGasLimit The gas limit for just the meta-transaction.
+   * @param gasCurrency The currency user specifies gas will be paid in.
    * @param v The recovery id of the ECDSA signature of the meta-transaction.
    * @param r Output value r of the ECDSA signature.
    * @param s Output value s of the ECDSA signature.
@@ -341,6 +352,7 @@ contract MetaTransactionWallet is
     bytes32 r,
     bytes32 s
   ) external returns (bytes memory) {
+    require(gasLimit == gasLeft(), "gasLimit different than limit authorized by signer");
     require(tx.gasprice <= maxGasPrice, "gasprice exceeds limit authorized by signer");
     //require(tx.gascurrency == gasCurrency, "gascurrency not authorized by signer"); // TODO ask Yorke if this is possible
     address _signer = getRefundableMetaTransactionSigner(

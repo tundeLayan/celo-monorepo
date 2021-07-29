@@ -30,11 +30,12 @@ library ExternalCall {
 
   // TODO
   /**
-   * @notice Executes external call.
+   * @notice Executes external call with refund to sender.
    * @param destination The address to call.
    * @param value The CELO value to be sent.
+   * @param gasLimit Gas limit for entire transaction including initial relay.
+   * @param metaGasLimit Gas limit for Meta Transaction.
    * @param data The data to be sent.
-   * @param metaGasLimit Gas limit for Meta Transaction
    * @return The call return value.
    */
   function executeWithRefund(address destination, uint256 value, uint256 gasLimit, uint256 metaGasLimit, bytes memory data)
@@ -45,15 +46,16 @@ library ExternalCall {
     if (data.length > 0) require(Address.isContract(destination), "Invalid contract address");
     bool success;
     bytes memory returnData;
-    uint256 partialEstimate = 1000; // TODO: EXPERIMENTALLY DETERMINE THIS CONSTSANT/ASK YORKE
-    msg.sender.transfer(partialEstimate);
+    uint256 partialRefund = 1000; // TODO: determine this constant (gas required for all operations before destination.call)
+    msg.sender.transfer(partialRefund);
     (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data); // TODO
     
     if(!success) {
       emit FailedMetaTransaction("Refundable Meta Transaction Failed");
     }
-    
-    msg.sender.transfer(gasLimit - gasLeft() - partialEstimate + buffer);
+
+    uint256 buffer = 15; // TODO: determine this constant (gas required for operations after msg.sender.transfer)
+    msg.sender.transfer(gasLimit - gasLeft() - partialRefund + buffer);
     
     return returnData;
   }
