@@ -46,13 +46,17 @@ contract MetaTransactionWallet is
     uint256 indexed nonce,
     bytes returnData
   );
+
   event RefundableMetaTransactionExecution(
     address indexed destination,
     uint256 value,
     bytes data,
     uint256 indexed nonce,
+    uint256 maxGasPrice,
+    uint256 gasLimit,
+    uint256 metaGasLimit,
+    uint256 gasCurrency,
     bytes returnData
-    //TODO add fields
   );
 
   // onlyGuardian functions can only be called when the guardian is not the zero address and
@@ -176,6 +180,43 @@ contract MetaTransactionWallet is
   }
 
   /**
+   * @notice Returns the struct hash of the refundable MetaTransaction
+   * @param destination The address to which the meta-transaction is to be sent.
+   * @param value The CELO value to be sent with the meta-transaction.
+   * @param data The data to be sent with the meta-transaction.
+   * @param _nonce The nonce for this meta-transaction local to this wallet.
+   * @param maxGasPrice Maximum gas price the user is willing to pay
+   * @param metaGasLimit Gas limit for just MetaTransaction
+   * @param gasCurrency Currency user specifies gas will be paid in
+   * @return The digest of the provided meta-transaction.
+   */
+  function _getRefundableMetaTransactionStructHash(
+    address destination,
+    uint256 value,
+    bytes memory data,
+    uint256 _nonce,
+    uint256 maxGasPrice,
+    uint256 gasLimit,
+    uint256 metaGasLimit,
+    uint256 gasCurrency
+  ) internal view returns (bytes32) {
+    return
+      keccak256(
+        abi.encode(
+          EIP712_EXECUTE_META_TRANSACTION_TYPEHASH,
+          destination,
+          value,
+          keccak256(data),
+          _nonce,
+          maxGasPrice,
+          gasLimit,
+          metaGasLimit,
+          gasCurrency
+        )
+      );
+  }
+
+  /**
    * @notice Returns the digest of the provided meta-transaction, to be signed by `sender`.
    * @param destination The address to which the meta-transaction is to be sent.
    * @param value The CELO value to be sent with the meta-transaction.
@@ -229,16 +270,19 @@ contract MetaTransactionWallet is
    * @return The address that signed the provided meta-transaction.
    */
   function getRefundableMetaTransactionSigner(
-    // TODO
     address destination,
     uint256 value,
     bytes memory data,
     uint256 _nonce,
+    uint256 maxGasPrice,
+    uint256 gasLimit,
+    uint256 metaGasLimit,
+    uint256 gasCurrency,
     uint8 v,
     bytes32 r,
     bytes32 s
   ) public view returns (address) {
-    bytes32 structHash = _getMetaTransactionStructHash(destination, value, data, _nonce); // TODO
+    bytes32 structHash = _getRefundableMetaTransactionStructHash(destination, value, data, _nonce, maxGasPrice, gasLimit, maxGasLimit, gasCurrency);
     return Signatures.getSignerOfTypedDataHash(eip712DomainSeparator, structHash, v, r, s);
   }
 
@@ -290,6 +334,7 @@ contract MetaTransactionWallet is
     uint256 value,
     bytes calldata data,
     uint256 maxGasPrice,
+    uint256 gasLimit,
     uint256 metaGasLimit,
     uint256 gasCurrency,
     uint8 v,
@@ -297,22 +342,23 @@ contract MetaTransactionWallet is
     bytes32 s
   ) external returns (bytes memory) {
     require(tx.gasprice <= maxGasPrice, "gasprice exceeds limit authorized by signer");
-    require(tx.gascurrency == gasCurrency, "gascurrency not authorized by signer"); // TODO ask Yorke if this is possible
-    address _signer = getMetaTransactionSigner(
+    //require(tx.gascurrency == gasCurrency, "gascurrency not authorized by signer"); // TODO ask Yorke if this is possible
+    address _signer = getRefundableMetaTransactionSigner(
       destination,
       value,
       data,
       nonce,
       maxGasPrice,
       gasLimit,
+      metaGasLimit,
       gasCurrency,
       v,
       r,
       s
-    ); // TODO
+    );
     require(_signer == signer, "Invalid meta-transaction signer");
     nonce = nonce.add(1);
-    bytes memory returnData = ExternalCall.execute(destination, value, data, metaGasLimit); // TODO
+    bytes memory returnData = ExternalCall.executeWithRefund(destination, value, gasLimit, metaGasLimit, data); // TODO
     emit RefundableMetaTransactionExecution(
       destination,
       value,
@@ -320,9 +366,10 @@ contract MetaTransactionWallet is
       nonce.sub(1),
       maxGasPrice,
       gasLimit,
+      metaGasLimit,
       gasCurrency,
       returnData
-    ); // TODO
+    );
     return returnData;
   }
 
