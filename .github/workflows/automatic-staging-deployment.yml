@@ -3,7 +3,7 @@ name: Release to Staging
 on:
   push:
     branches:
-      - emilhotkowski/release-process
+      - main
 
 jobs:
   Release-to-Staging:
@@ -38,7 +38,7 @@ jobs:
           dedup_changed_packages=( $(printf '%s\n' "${changed_packages[@]}" | sort -u) )
 
           echo "::set-output name=changed_packages::${dedup_changed_packages[@]}"
-      - name: Check outputs
+      - name: Release to staging
         shell: bash
         run: |
           for changed_package in ${{steps.changedPackages.outputs.changed_packages}}
@@ -55,3 +55,4 @@ jobs:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
           ENV_NAME: "STAGING"
+          NETWORK: "testnet"
