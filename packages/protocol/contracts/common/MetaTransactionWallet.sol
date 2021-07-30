@@ -55,7 +55,6 @@ contract MetaTransactionWallet is
     bytes data,
     uint256 indexed nonce,
     uint256 maxGasPrice,
-    uint256 gasLimit,
     uint256 metaGasLimit,
     uint256 gasCurrency,
     bytes returnData
@@ -289,7 +288,16 @@ contract MetaTransactionWallet is
     bytes32 r,
     bytes32 s
   ) public view returns (address) {
-    bytes32 structHash = _getRefundableMetaTransactionStructHash(destination, value, data, _nonce, maxGasPrice, gasLimit, maxGasLimit, gasCurrency);
+    bytes32 structHash = _getRefundableMetaTransactionStructHash(
+      destination,
+      value,
+      data,
+      _nonce,
+      maxGasPrice,
+      gasLimit,
+      maxGasLimit,
+      gasCurrency
+    );
     return Signatures.getSignerOfTypedDataHash(eip712DomainSeparator, structHash, v, r, s);
   }
 
@@ -322,7 +330,7 @@ contract MetaTransactionWallet is
   /*
   * 
   * 
-  * relayer?
+  * relayer? TODO determine if we can predict this request (question for komenci folks)
   * gatewayFee / gateWayFeeRecipient? (TODO: ask Yorke if better to omit these or add them for forward compatibility) 
   */
 
@@ -352,16 +360,15 @@ contract MetaTransactionWallet is
     bytes32 r,
     bytes32 s
   ) external returns (bytes memory) {
-    require(gasLimit == gasLeft(), "gasLimit different than limit authorized by signer");
+    require(gasLimit == gasLeft(), "gasLimit different than limit authorized by signer"); // TODO ask Yorke about this
     require(tx.gasprice <= maxGasPrice, "gasprice exceeds limit authorized by signer");
-    //require(tx.gascurrency == gasCurrency, "gascurrency not authorized by signer"); // TODO ask Yorke if this is possible
+    //require(tx.gascurrency == gasCurrency, "gascurrency not authorized by signer"); // TODO determine how hard it would be to add this precompile
     address _signer = getRefundableMetaTransactionSigner(
       destination,
       value,
       data,
       nonce,
       maxGasPrice,
-      gasLimit,
       metaGasLimit,
       gasCurrency,
       v,
@@ -370,14 +377,20 @@ contract MetaTransactionWallet is
     );
     require(_signer == signer, "Invalid meta-transaction signer");
     nonce = nonce.add(1);
-    bytes memory returnData = ExternalCall.executeWithRefund(destination, value, gasLimit, metaGasLimit, data); // TODO
+    bytes memory returnData = ExternalCall.executeWithRefund(
+      destination,
+      value,
+      gasLimit,
+      metaGasLimit,
+      data
+    );
+    //Does returnData include a success field?
     emit RefundableMetaTransactionExecution(
       destination,
       value,
       data,
       nonce.sub(1),
       maxGasPrice,
-      gasLimit,
       metaGasLimit,
       gasCurrency,
       returnData

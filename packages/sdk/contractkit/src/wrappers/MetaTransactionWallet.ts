@@ -1,16 +1,16 @@
 import { Address, ensureLeading0x, trimLeading0x } from '@celo/base/lib/address'
 import { Signature } from '@celo/base/lib/signatureUtils'
 import { CeloTransactionObject, CeloTxObject, toTransactionObject } from '@celo/connect'
-import { EIP712TypedData } from '@celo/utils/lib/sign-typed-data-utils' //Looks important for batching
+import { EIP712TypedData } from '@celo/utils/lib/sign-typed-data-utils'
 import BigNumber from 'bignumber.js'
-import { MetaTransactionWallet } from '../generated/MetaTransactionWallet' //Looks important
+import { MetaTransactionWallet } from '../generated/MetaTransactionWallet'
 import {
   BaseWrapper,
   proxyCall,
   proxySend,
   stringIdentity,
   valueToInt,
-  valueToString
+  valueToString,
 } from './BaseWrapper'
 
 export interface TransactionObjectWithValue<T> {
@@ -24,7 +24,21 @@ export interface RawTransaction {
   data: string
 }
 
-export type TransactionInput<T> = CeloTxObject<T> | TransactionObjectWithValue<T> | RawTransaction
+export interface RefundableRawTransaction {
+  destination: string
+  value: string
+  data: string
+  maxGasPrice: string // TODO
+  gasLimit: string
+  metaGasLimit: string // TODO
+  gasCurrency: string
+}
+
+export type TransactionInput<T> =
+  | CeloTxObject<T>
+  | TransactionObjectWithValue<T>
+  | RawTransaction
+  | RefundableRawTransaction
 
 /**
  * Class that wraps the MetaTransactionWallet
@@ -84,7 +98,34 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     )
   }
 
-  // TODO: add executeMetaTransactionWithRefund()
+  /**
+   * Execute a signed refundable meta transaction
+   * Reverts if meta-tx signer is not a signer for the wallet
+   * @param tx a TransactionInput
+   * @param signature a Signature
+   */
+  public executeMetaTransactionWithRefund(
+    tx: TransactionInput<any>,
+    signature: Signature
+  ): CeloTransactionObject<string> {
+    //const rawTx = toRawTransaction(tx)
+
+    return toTransactionObject(
+      this.kit.connection,
+      this.contract.methods.executeMetaTransactionWithRefund(
+        tx.destination,
+        tx.value,
+        tx.data,
+        tx.maxGasPrice,
+        tx.gasLimit,
+        tx.metaGasLimit,
+        tx.gasCurrency,
+        signature.v,
+        signature.r,
+        signature.s
+      )
+    )
+  }
 
   /**
    * Signs a meta transaction as EIP712 typed data
@@ -128,6 +169,8 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     return [rawTx.destination, rawTx.value, rawTx.data, nonce]
   }
 
+  // TODO: getMetaTransactionWithRefundDigestParams()
+
   getMetaTransactionDigest = proxyCall(
     this.contract.methods.getMetaTransactionDigest,
     this.getMetaTransactionDigestParams,
@@ -152,7 +195,6 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   }
 
   // TODO: add getMetaTransactionWithRefundSignerParams()
-
 
   getMetaTransactionSigner = proxyCall(
     this.contract.methods.getMetaTransactionSigner,
@@ -233,6 +275,34 @@ export const toRawTransaction = (tx: TransactionInput<any>): RawTransaction => {
       value: '0',
     }
   }
+}
+
+/**
+ * Turns any possible way to pass in a transaction into the raw values
+ * that are actually required. This is used both internally to normalize
+ * ways in which transactions are passed in but also public in order
+ * for one instance of ContractKit to serialize a meta transaction to
+ * send over the wire and be consumed somewhere else.
+ * @param tx TransactionInput<any> union of all the ways we expect transactions
+ * @returns a RawTransactions that's serializable
+ */
+export const toRefundableRawTransaction = (tx: TransactionInput<any>): RefundableRawTransaction => {
+  // TODO
+  // if ('destination' in tx) {
+  //   return tx
+  // } else if ('value' in tx) {
+  //   return {
+  //     destination: tx.txo._parent.options.address,
+  //     data: tx.txo.encodeABI(),
+  //     value: valueToString(tx.value),
+  //   }
+  // } else {
+  //   return {
+  //     destination: tx._parent.options.address,
+  //     data: tx.encodeABI(),
+  //     value: '0',
+  //   }
+  // }
 }
 
 /**
