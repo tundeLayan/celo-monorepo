@@ -46,7 +46,7 @@ library ExternalCall {
     if (data.length > 0) require(Address.isContract(destination), "Invalid contract address");
     bool success;
     bytes memory returnData;
-    uint256 partialRefund = 1000; // TODO: determine this constant (gas required for all operations before destination.call)
+    uint256 partialRefund = 4747; // TODO: determine this constant (gas required for all operations before destination.call)
     msg.sender.transfer(partialRefund);
     (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data); // TODO
     
@@ -54,7 +54,7 @@ library ExternalCall {
       emit FailedMetaTransaction("Refundable Meta Transaction Failed");
     }
 
-    uint256 buffer = 15; // TODO: determine this constant (gas required for operations after msg.sender.transfer)
+    uint256 buffer = 4747; // TODO: determine this constant (gas required for operations after msg.sender.transfer)
     msg.sender.transfer(gasLimit - gasLeft() - partialRefund + buffer);
     
     return returnData;

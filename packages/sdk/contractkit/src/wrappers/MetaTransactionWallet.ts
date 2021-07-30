@@ -1,16 +1,16 @@
 import { Address, ensureLeading0x, trimLeading0x } from '@celo/base/lib/address'
 import { Signature } from '@celo/base/lib/signatureUtils'
 import { CeloTransactionObject, CeloTxObject, toTransactionObject } from '@celo/connect'
-import { EIP712TypedData } from '@celo/utils/lib/sign-typed-data-utils'
+import { EIP712TypedData } from '@celo/utils/lib/sign-typed-data-utils' //Looks important for batching
 import BigNumber from 'bignumber.js'
-import { MetaTransactionWallet } from '../generated/MetaTransactionWallet'
+import { MetaTransactionWallet } from '../generated/MetaTransactionWallet' //Looks important
 import {
   BaseWrapper,
   proxyCall,
   proxySend,
   stringIdentity,
   valueToInt,
-  valueToString,
+  valueToString
 } from './BaseWrapper'
 
 export interface TransactionObjectWithValue<T> {
@@ -84,6 +84,8 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     )
   }
 
+  // TODO: add executeMetaTransactionWithRefund()
+
   /**
    * Signs a meta transaction as EIP712 typed data
    * @param tx a TransactionWrapper
@@ -116,6 +118,8 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     return this.executeMetaTransaction(tx, signature)
   }
 
+  // TODO: signAndExecuteMetaTransactionWithRefund()
+
   private getMetaTransactionDigestParams = (
     tx: TransactionInput<any>,
     nonce: number
@@ -146,11 +150,17 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
       signature.s,
     ]
   }
+
+  // TODO: add getMetaTransactionWithRefundSignerParams()
+
+
   getMetaTransactionSigner = proxyCall(
     this.contract.methods.getMetaTransactionSigner,
     this.getMetaTransactionSignerParams,
     stringIdentity
   )
+
+  // TODO: add getMetaTransactionWithRefundSigner()
 
   eip712DomainSeparator = proxyCall(this.contract.methods.eip712DomainSeparator)
   isOwner = proxyCall(this.contract.methods.isOwner)

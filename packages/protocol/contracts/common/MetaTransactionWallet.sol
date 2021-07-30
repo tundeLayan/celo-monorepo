@@ -182,7 +182,7 @@ contract MetaTransactionWallet is
   }
 
   /**
-   * @notice Returns the struct hash of the refundable MetaTransaction
+   * @notice Returns the struct hash of the refundable meta-transaction
    * @param destination The address to which the meta-transaction is to be sent.
    * @param value The CELO value to be sent with the meta-transaction.
    * @param data The data to be sent with the meta-transaction.
