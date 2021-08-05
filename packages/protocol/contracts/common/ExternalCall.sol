@@ -27,7 +27,6 @@ library ExternalCall {
     return returnData;
   }
 
-  // TODO
   /**
    * @notice Executes external call with refund to sender.
    * @param destination The address to call.

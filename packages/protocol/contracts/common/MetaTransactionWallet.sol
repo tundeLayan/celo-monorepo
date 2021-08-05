@@ -49,7 +49,7 @@ contract MetaTransactionWallet is
     bytes returnData
   );
 
-  event RefundableMetaTransactionExecution(
+  event MetaTransactionWithRefundExecution(
     address indexed destination,
     uint256 value,
     bytes data,
@@ -192,7 +192,7 @@ contract MetaTransactionWallet is
    * @param gasCurrency The currency user specifies gas will be paid in.
    * @return The digest of the provided meta-transaction.
    */
-  function _getRefundableMetaTransactionStructHash(
+  function _getMetaTransactionWithRefundStructHash(
     address destination,
     uint256 value,
     bytes memory data,
@@ -237,6 +237,32 @@ contract MetaTransactionWallet is
   }
 
   /**
+   * @notice Returns the digest of the provided meta-transaction, to be signed by `sender`.
+   * @param destination The address to which the meta-transaction is to be sent.
+   * @param value The CELO value to be sent with the meta-transaction.
+   * @param data The data to be sent with the meta-transaction.
+   * @param _nonce The nonce for this meta-transaction local to this wallet.
+   * @param maxGasPrice The maximum gas price the user is willing to pay.
+   * @param gasLimit The gas limit for entire relayed transaction.
+   * @param metaGasLimit The gas limit for just the meta-transaction.
+   * @param gasCurrency The currency user specifies gas will be paid in.
+   * @return The digest of the provided meta-transaction.
+   */
+  function getMetaTransactionWithRefundDigest(
+    address destination,
+    uint256 value,
+    bytes calldata data,
+    uint256 _nonce,
+    uint256 maxGasPrice,
+    uint256 gasLimit,
+    uint256 metaGasLimit,
+    uint256 gasCurrency
+  ) external view returns (bytes32) {
+    bytes32 structHash = _getMetaTransactionWithRefundStructHash(destination, value, data, _nonce, maxGasPrice, gasLimit, metaGasLimit, gasCurrency);
+    return Signatures.toEthSignedTypedDataHash(eip712DomainSeparator, structHash);
+  }
+
+  /**
    * @notice Returns the address that signed the provided meta-transaction.
    * @param destination The address to which the meta-transaction is to be sent.
    * @param value The CELO value to be sent with the meta-transaction.
@@ -275,7 +301,7 @@ contract MetaTransactionWallet is
    * @param s Output value s of the ECDSA signature.
    * @return The address that signed the provided meta-transaction.
    */
-  function getRefundableMetaTransactionSigner(
+  function getMetaTransactionWithRefundSigner(
     address destination,
     uint256 value,
     bytes memory data,
@@ -288,7 +314,7 @@ contract MetaTransactionWallet is
     bytes32 r,
     bytes32 s
   ) public view returns (address) {
-    bytes32 structHash = _getRefundableMetaTransactionStructHash(
+    bytes32 structHash = _getMetaTransactionWithRefundStructHash(
       destination,
       value,
       data,
@@ -360,10 +386,12 @@ contract MetaTransactionWallet is
     bytes32 r,
     bytes32 s
   ) external returns (bytes memory) {
-    require(gasLimit == gasLeft(), "gasLimit different than limit authorized by signer"); // TODO ask Yorke about this
+    require(gasLimit == gasLeft(), "gasLimit different than limit authorized by signer"); // To ensure Komenci actually set the correct gas limit TODO ask Yorke about this
+    require(this.balance >= value + gasLimit, "insufficient funds");
     require(tx.gasprice <= maxGasPrice, "gasprice exceeds limit authorized by signer");
+
     //require(tx.gascurrency == gasCurrency, "gascurrency not authorized by signer"); // TODO determine how hard it would be to add this precompile
-    address _signer = getRefundableMetaTransactionSigner(
+    address _signer = getMetaTransactionWithRefundSigner(
       destination,
       value,
       data,
@@ -384,8 +412,8 @@ contract MetaTransactionWallet is
       metaGasLimit,
       data
     );
-    //Does returnData include a success field?
-    emit RefundableMetaTransactionExecution(
+    
+    emit MetaTransactionWithRefundExecution(
       destination,
       value,
       data,
@@ -416,8 +444,6 @@ contract MetaTransactionWallet is
     emit TransactionExecution(destination, value, data, returnData);
     return returnData;
   }
-
-  // TODO: Get more info on how batch transactions work
 
   /**
    * @notice Executes multiple transactions on behalf of the signer.`

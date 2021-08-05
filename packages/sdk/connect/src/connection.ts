@@ -15,7 +15,7 @@ import {
   CeloTxPending,
   CeloTxReceipt,
   Provider,
-  Syncing,
+  Syncing
 } from './types'
 import { decodeStringParameter } from './utils/abi-utils'
 import {
@@ -28,7 +28,7 @@ import {
   outputBlockFormatter,
   outputBlockHeaderFormatter,
   outputCeloTxFormatter,
-  outputCeloTxReceiptFormatter,
+  outputCeloTxReceiptFormatter
 } from './utils/formatter'
 import { hasProperty } from './utils/provider-utils'
 import { DefaultRpcCaller, getRandomId, RpcCaller } from './utils/rpc-caller'
