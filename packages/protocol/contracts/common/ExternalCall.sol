@@ -48,9 +48,11 @@ library ExternalCall {
     bytes memory returnData;
     uint256 partialRefund = gasLimit.sub(gasLeft());
     msg.sender.transfer(partialRefund);
-    (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data);
-    if (!success) {
-      emit FailedMetaTransaction("Refundable Meta Transaction Failed"); //Can we emit an event from a library?
+    if(this.balance >= metaGasLimit) {
+      (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data);
+      if (!success) {
+        emit FailedMetaTransaction("Refundable Meta Transaction Failed"); //Can we emit an event from a library?
+      }
     }
     uint256 buffer = 4747; // TODO: determine this constant (gas required for operations after msg.sender.transfer)
     msg.sender.transfer(gasLimit.sub(gasLeft()).sub(partialRefund).add(buffer));
