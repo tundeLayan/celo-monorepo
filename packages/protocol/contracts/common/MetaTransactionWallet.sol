@@ -56,7 +56,6 @@ contract MetaTransactionWallet is
     uint256 indexed nonce,
     uint256 maxGasPrice,
     uint256 metaGasLimit,
-    string gasCurrency,
     bytes returnData
   );
 
@@ -189,7 +188,6 @@ contract MetaTransactionWallet is
    * @param maxGasPrice The maximum gas price the user is willing to pay.
    * @param gasLimit The gas limit for entire relayed transaction.
    * @param metaGasLimit The gas limit for just the meta-transaction.
-   * @param gasCurrency The currency user specifies gas will be paid in.
    * @return The digest of the provided meta-transaction.
    */
   function _getMetaTransactionWithRefundStructHash(
@@ -199,8 +197,7 @@ contract MetaTransactionWallet is
     uint256 _nonce,
     uint256 maxGasPrice,
     uint256 gasLimit,
-    uint256 metaGasLimit,
-    string gasCurrency
+    uint256 metaGasLimit
   ) internal view returns (bytes32) {
     return
       keccak256(
@@ -212,8 +209,7 @@ contract MetaTransactionWallet is
           _nonce,
           maxGasPrice,
           gasLimit,
-          metaGasLimit,
-          gasCurrency
+          metaGasLimit
         )
       );
   }
@@ -245,7 +241,6 @@ contract MetaTransactionWallet is
    * @param maxGasPrice The maximum gas price the user is willing to pay.
    * @param gasLimit The gas limit for entire relayed transaction.
    * @param metaGasLimit The gas limit for just the meta-transaction.
-   * @param gasCurrency The currency user specifies gas will be paid in.
    * @return The digest of the provided meta-transaction.
    */
   function getMetaTransactionWithRefundDigest(
@@ -255,10 +250,9 @@ contract MetaTransactionWallet is
     uint256 _nonce,
     uint256 maxGasPrice,
     uint256 gasLimit,
-    uint256 metaGasLimit,
-    string gasCurrency
+    uint256 metaGasLimit
   ) external view returns (bytes32) {
-    bytes32 structHash = _getMetaTransactionWithRefundStructHash(destination, value, data, _nonce, maxGasPrice, gasLimit, metaGasLimit, gasCurrency);
+    bytes32 structHash = _getMetaTransactionWithRefundStructHash(destination, value, data, _nonce, maxGasPrice, gasLimit, metaGasLimit);
     return Signatures.toEthSignedTypedDataHash(eip712DomainSeparator, structHash);
   }
 
@@ -295,7 +289,6 @@ contract MetaTransactionWallet is
    * @param maxGasPrice The maximum gas price the user is willing to pay.
    * @param gasLimit The gas limit for entire relayed transaction.
    * @param metaGasLimit The gas limit for just the meta-transaction.
-   * @param gasCurrency The currency user specifies gas will be paid in.
    * @param v The recovery id of the ECDSA signature of the meta-transaction.
    * @param r Output value r of the ECDSA signature.
    * @param s Output value s of the ECDSA signature.
@@ -308,7 +301,6 @@ contract MetaTransactionWallet is
     uint256 _nonce,
     uint256 maxGasPrice,
     uint256 metaGasLimit,
-    string gasCurrency,
     uint8 v,
     bytes32 r,
     bytes32 s
@@ -319,8 +311,7 @@ contract MetaTransactionWallet is
       data,
       _nonce,
       maxGasPrice,
-      maxGasLimit,
-      gasCurrency
+      maxGasLimit
     );
     return Signatures.getSignerOfTypedDataHash(eip712DomainSeparator, structHash, v, r, s);
   }
@@ -366,7 +357,6 @@ contract MetaTransactionWallet is
    * @param maxGasPrice The maximum gas price the user is willing to pay.
    * @param gasLimit The gas limit for entire relayed transaction.
    * @param metaGasLimit The gas limit for just the meta-transaction.
-   * @param gasCurrency The currency user specifies gas will be paid in.
    * @param v The recovery id of the ECDSA signature of the meta-transaction.
    * @param r Output value r of the ECDSA signature.
    * @param s Output value s of the ECDSA signature.
@@ -379,7 +369,6 @@ contract MetaTransactionWallet is
     uint256 maxGasPrice,
     uint256 gasLimit,
     uint256 metaGasLimit,
-    string gasCurrency,
     uint8 v,
     bytes32 r,
     bytes32 s
@@ -388,7 +377,6 @@ contract MetaTransactionWallet is
     require(this.balance >= value + gasLimit, "insufficient balance");
     require(tx.gasprice <= maxGasPrice, "gasprice exceeds limit authorized by signer");
 
-    //require(tx.gascurrency == gasCurrency, "gascurrency not authorized by signer"); // TODO determine how hard it would be to add this precompile
     address _signer = getMetaTransactionWithRefundSigner(
       destination,
       value,
@@ -396,7 +384,6 @@ contract MetaTransactionWallet is
       nonce,
       maxGasPrice,
       metaGasLimit,
-      gasCurrency,
       v,
       r,
       s
@@ -418,7 +405,6 @@ contract MetaTransactionWallet is
       nonce.sub(1),
       maxGasPrice,
       metaGasLimit,
-      gasCurrency,
       returnData
     );
     return returnData;

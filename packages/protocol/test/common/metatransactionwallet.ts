@@ -1,7 +1,7 @@
 import {
   constructMetaTransactionExecutionDigest,
   getDomainDigest,
-  getSignatureForMetaTransaction,
+  getSignatureForMetaTransaction
 } from '@celo/protocol/lib/meta-tx-utils'
 import { assertEqualBN, assertLogMatches2, assertRevert } from '@celo/protocol/lib/test-utils'
 import { ensureLeading0x, trimLeading0x } from '@celo/utils/lib/address'
@@ -493,10 +493,103 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
     })
   })
 
-  describe('#executeMetaTransaction()', () => {
+  // describe('#executeMetaTransaction()', () => {
+  //   const value = 100
+  //   const destination = web3.utils.toChecksumAddress(web3.utils.randomHex(20))
+  //   const data = '0x'
+  //   let submitter
+  //   let nonce
+  //   let transferSigner
+
+  //   const doTransfer = async () => {
+  //     const { v, r, s } = await getSignatureForMetaTransaction(transferSigner, wallet.address, {
+  //       value,
+  //       destination,
+  //       data,
+  //       nonce,
+  //     })
+
+  //     return wallet.executeMetaTransaction(destination, value, data, v, r, s, {
+  //       from: submitter,
+  //     })
+  //   }
+
+  //   beforeEach(async () => {
+  //     // Transfer some funds to the wallet
+  //     await web3.eth.sendTransaction({ from: accounts[0], to: wallet.address, value })
+  //   })
+
+  //   describe('when submitted by a non-signer', () => {
+  //     beforeEach(() => {
+  //       submitter = nonSigner
+  //     })
+
+  //     describe('when the nonce is valid', () => {
+  //       beforeEach(() => {
+  //         nonce = 0
+  //       })
+
+  //       let res: any
+  //       describe('when signed by the signer', () => {
+  //         beforeEach(async () => {
+  //           transferSigner = signer
+  //           res = await doTransfer()
+  //         })
+
+  //         it('should execute the transaction', async () => {
+  //           assert.equal(await web3.eth.getBalance(destination), value)
+  //         })
+
+  //         it('should increment the nonce', async () => {
+  //           assertEqualBN(await wallet.nonce(), 1)
+  //         })
+
+  //         it('should emit the MetaTransactionExecution event', () => {
+  //           assertLogMatches2(res.logs[0], {
+  //             event: 'MetaTransactionExecution',
+  //             args: {
+  //               destination,
+  //               value,
+  //               data: null,
+  //               nonce: 0,
+  //               returnData: null,
+  //             },
+  //           })
+  //         })
+  //       })
+
+  //       describe('when signed by a non-signer', () => {
+  //         it('should revert', async () => {
+  //           transferSigner = nonSigner
+  //           await assertRevert(doTransfer())
+  //         })
+  //       })
+  //     })
+
+  //     describe('when the nonce is invalid', () => {
+  //       beforeEach(() => {
+  //         nonce = 1
+  //       })
+  //       describe('when signed by the signer', () => {
+  //         beforeEach(() => {
+  //           transferSigner = signer
+  //         })
+  //         it('should revert', async () => {
+  //           await assertRevert(doTransfer())
+  //         })
+  //       })
+  //     })
+  //   })
+  // })
+
+
+  describe('#executeMetaTransactionWithRefund()', () => {
     const value = 100
     const destination = web3.utils.toChecksumAddress(web3.utils.randomHex(20))
     const data = '0x'
+    const maxGasPrice = 5
+    const gasLimit = 100
+    const metaGasLimit = 10
     let submitter
     let nonce
     let transferSigner
@@ -506,6 +599,9 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
         value,
         destination,
         data,
+        maxGasPrice,
+        gasLimit,
+        metaGasLimit,
         nonce,
       })
 
