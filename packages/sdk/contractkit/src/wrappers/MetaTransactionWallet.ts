@@ -24,13 +24,10 @@ export interface RawTransaction {
   data: string
 }
 
-export interface RawTransactionWithRefund {
-  destination: string
-  value: string
-  data: string
-  maxGasPrice: string // TODO
-  gasLimit: string
-  metaGasLimit: string // TODO
+export interface RawTransactionWithRefund extends RawTransaction {
+  maxGasPrice: number
+  gasLimit: number
+  metaGasLimit: number
   gasCurrency: string
 }
 
@@ -107,20 +104,24 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
    */
   public executeMetaTransactionWithRefund(
     tx: TransactionInput<any>,
-    signature: Signature
+    signature: Signature,
+    maxGasPrice: number,
+    gasLimit: number,
+    metaGasLimit: number,
+    gasCurrency: string
   ): CeloTransactionObject<string> {
-    const rawTx = toRawTransactionWithRefund(tx)
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
 
     return toTransactionObject(
       this.kit.connection,
       this.contract.methods.executeMetaTransactionWithRefund(
-        tx.destination,
-        tx.value,
-        tx.data,
-        tx.maxGasPrice,
-        tx.gasLimit,
-        tx.metaGasLimit,
-        tx.gasCurrency,
+        rawTx.destination,
+        rawTx.value,
+        rawTx.data,
+        rawTx.maxGasPrice,
+        rawTx.gasLimit,
+        rawTx.metaGasLimit,
+        rawTx.gasCurrency,
         signature.v,
         signature.r,
         signature.s
@@ -154,13 +155,13 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
    * @param nonce Optional -- will query contract state if not passed
    * @returns signature a Signature
    */
-   public async signMetaTransactionWithRefund(tx: TransactionInput<any>, nonce?: number): Promise<Signature> {
+   public async signMetaTransactionWithRefund(tx: TransactionInput<any>, maxGasPrice: number, gasLimit: number, metaGasLimit: number, gasCurrency: string, nonce?: number): Promise<Signature> {
     if (nonce === undefined) {
       nonce = await this.nonce()
     }
     const typedData = buildMetaTxWithRefundTypedData(
       this.address,
-      toRawTransactionWithRefund(tx),
+      toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency),
       nonce,
       await this.chainId()
     )
@@ -186,10 +187,14 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
    * @param tx a TransactionInput
    */
    public async signAndExecuteMetaTransactionWithRefund(
-    tx: TransactionInput<any>
+    tx: TransactionInput<any>,
+    maxGasPrice: number, 
+    gasLimit: number, 
+    metaGasLimit: number, 
+    gasCurrency: string
   ): Promise<CeloTransactionObject<string>> {
-    const signature = await this.signMetaTransactionWithRefund(tx)
-    return this.executeMetaTransactionWithRefund(tx, signature)
+    const signature = await this.signMetaTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+    return this.executeMetaTransactionWithRefund(tx, signature, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
   }
 
   private getMetaTransactionDigestParams = (
@@ -202,9 +207,13 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
 
   private getMetaTransactionWithRefundDigestParams = (
     tx: TransactionInput<any>,
-    nonce: number
-  ): [string, string, string, string, string, string, string, number] => {
-    const rawTx = toRawTransactionWithRefund(tx)
+    nonce: number,
+    maxGasPrice: number, 
+    gasLimit: number, 
+    metaGasLimit: number, 
+    gasCurrency: string
+  ): [string, string, string, number, number, number, string, number] => {
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
     return [rawTx.destination, rawTx.value, rawTx.data, rawTx.maxGasPrice, rawTx.gasLimit, rawTx.metaGasLimit, rawTx.gasCurrency, nonce]
   }
 
@@ -240,9 +249,13 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   private getMetaTransactionWithRefundSignerParams = (
     tx: TransactionInput<any>,
     nonce: number,
-    signature: Signature
-  ): [string, string, string, string, string, string, string, number, number, string, string] => {
-    const rawTx = toRawTransactionWithRefund(tx)
+    signature: Signature,
+    maxGasPrice: number, 
+    gasLimit: number, 
+    metaGasLimit: number, 
+    gasCurrency: string
+  ): [string, string, string, number, number, number, string, number, number, string, string] => {
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
     return [
       rawTx.destination,
       rawTx.value,
@@ -352,43 +365,14 @@ export const toRawTransaction = (tx: TransactionInput<any>): RawTransaction => {
  * @param tx TransactionInput<any> union of all the ways we expect transactions
  * @returns a RawTransactions that's serializable
  */
-export const toRawTransactionWithRefund = (tx: TransactionInput<any>): RawTransactionWithRefund => {
-
-  if ('metaGasLimit' in tx) {
+export const toRawTransactionWithRefund = (tx: TransactionInput<any>, maxGasPrice: number, gasLimit: number, metaGasLimit: number, gasCurrency: string): RawTransactionWithRefund => {
+  if ('maxGasPrice' in tx) {
     return tx
-  } else if ('destination' in tx) {
-    return {
-      destination: tx.destination,
-      data: tx.data,
-      value: tx.value,
-      maxGasPrice: '0',
-      gasLimit: '0',
-      metaGasLimit: '0',
-      gasCurrency: 'Celo', // IDK what should actually go here
-    }
-  } else if ('value' in tx) {
-    return {
-      destination: tx.txo._parent.options.address,
-      data: tx.txo.encodeABI(),
-      value: valueToString(tx.value),
-      maxGasPrice: '0',
-      gasLimit: '0',
-      metaGasLimit: '0',
-      gasCurrency: 'Celo',
-    }
   } else {
-    return {
-      destination: tx._parent.options.address,
-      data: tx.encodeABI(),
-      value: '0',
-      maxGasPrice: '0',
-      gasLimit: '0',
-      metaGasLimit: '0',
-      gasCurrency: 'Celo',
-    }
+    const rawTx = toRawTransaction(tx)
+    return {...rawTx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency}
   }
 }
-
 
 /**
  * Turns an array of transaction inputs into the argument that
@@ -467,9 +451,9 @@ export const buildMetaTxWithRefundTypedData = (
         { name: 'destination', type: 'address' },
         { name: 'value', type: 'uint256' },
         { name: 'data', type: 'bytes' },
-        { name: 'metaGasPrice', type: 'string' },
-        { name: 'gasLimit', type: 'string' },
-        { name: 'metaGasLimit', type: 'string' },
+        { name: 'metaGasPrice', type: 'uint256' },
+        { name: 'gasLimit', type: 'uint256' },
+        { name: 'metaGasLimit', type: 'uint256' },
         { name: 'gasCurrency', type: 'string' },
         { name: 'nonce', type: 'uint256' },
       ],

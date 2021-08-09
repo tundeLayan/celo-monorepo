@@ -56,7 +56,7 @@ contract MetaTransactionWallet is
     uint256 indexed nonce,
     uint256 maxGasPrice,
     uint256 metaGasLimit,
-    uint256 gasCurrency,
+    string gasCurrency,
     bytes returnData
   );
 
@@ -200,7 +200,7 @@ contract MetaTransactionWallet is
     uint256 maxGasPrice,
     uint256 gasLimit,
     uint256 metaGasLimit,
-    uint256 gasCurrency
+    string gasCurrency
   ) internal view returns (bytes32) {
     return
       keccak256(
@@ -256,7 +256,7 @@ contract MetaTransactionWallet is
     uint256 maxGasPrice,
     uint256 gasLimit,
     uint256 metaGasLimit,
-    uint256 gasCurrency
+    string gasCurrency
   ) external view returns (bytes32) {
     bytes32 structHash = _getMetaTransactionWithRefundStructHash(destination, value, data, _nonce, maxGasPrice, gasLimit, metaGasLimit, gasCurrency);
     return Signatures.toEthSignedTypedDataHash(eip712DomainSeparator, structHash);
@@ -307,9 +307,8 @@ contract MetaTransactionWallet is
     bytes memory data,
     uint256 _nonce,
     uint256 maxGasPrice,
-    uint256 gasLimit,
     uint256 metaGasLimit,
-    uint256 gasCurrency,
+    string gasCurrency,
     uint8 v,
     bytes32 r,
     bytes32 s
@@ -320,7 +319,6 @@ contract MetaTransactionWallet is
       data,
       _nonce,
       maxGasPrice,
-      gasLimit,
       maxGasLimit,
       gasCurrency
     );
@@ -381,13 +379,13 @@ contract MetaTransactionWallet is
     uint256 maxGasPrice,
     uint256 gasLimit,
     uint256 metaGasLimit,
-    uint256 gasCurrency,
+    string gasCurrency,
     uint8 v,
     bytes32 r,
     bytes32 s
   ) external returns (bytes memory) {
     require(gasLimit == gasLeft(), "gasLimit different than limit authorized by signer"); // To ensure Komenci actually set the correct gas limit TODO ask Yorke about this
-    require(this.balance >= value + gasLimit, "insufficient funds");
+    require(this.balance >= value + gasLimit, "insufficient balance");
     require(tx.gasprice <= maxGasPrice, "gasprice exceeds limit authorized by signer");
 
     //require(tx.gascurrency == gasCurrency, "gascurrency not authorized by signer"); // TODO determine how hard it would be to add this precompile
@@ -408,9 +406,9 @@ contract MetaTransactionWallet is
     bytes memory returnData = ExternalCall.executeWithRefund(
       destination,
       value,
+      data,
       gasLimit,
-      metaGasLimit,
-      data
+      metaGasLimit
     );
     
     emit MetaTransactionWithRefundExecution(

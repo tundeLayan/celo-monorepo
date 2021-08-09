@@ -39,23 +39,25 @@ library ExternalCall {
   function executeWithRefund(
     address destination,
     uint256 value,
+    bytes memory data,
     uint256 gasLimit,
-    uint256 metaGasLimit,
-    bytes memory data
+    uint256 metaGasLimit
   ) internal returns (bytes memory) {
     if (data.length > 0) require(Address.isContract(destination), "Invalid contract address");
     bool success;
     bytes memory returnData;
-    uint256 partialRefund = gasLimit.sub(gasLeft());
+    uint256 buffer1 = 4949; // TODO: determine this constant (gas required for operations after msg.sender.transfer)
+    uint256 buffer2 = 4747; 
+    uint256 partialRefund = gasLimit.sub(gasLeft()); //May not actually be worth it
     msg.sender.transfer(partialRefund);
-    if(this.balance >= metaGasLimit) {
+    if(address(this).balance >= metaGasLimit.add(value).add(buffer1)) {
       (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data);
       if (!success) {
         emit FailedMetaTransaction("Refundable Meta Transaction Failed"); //Can we emit an event from a library?
       }
     }
-    uint256 buffer = 4747; // TODO: determine this constant (gas required for operations after msg.sender.transfer)
-    msg.sender.transfer(gasLimit.sub(gasLeft()).sub(partialRefund).add(buffer));
+    
+    msg.sender.transfer(gasLimit.sub(gasLeft()).sub(partialRefund).add(buffer2));
     return returnData;
   }
 }
