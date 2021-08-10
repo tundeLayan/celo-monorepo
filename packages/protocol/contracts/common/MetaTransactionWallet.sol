@@ -351,9 +351,7 @@ contract MetaTransactionWallet is
     return returnData;
   }
 
-  /*
-  * 
-  * 
+  /**
   * relayer? TODO determine if we can predict this request (question for komenci folks)
   * gatewayFee / gateWayFeeRecipient? (TODO: ask Contracts if better to omit these or add them for forward compatibility) 
   */
@@ -406,8 +404,9 @@ contract MetaTransactionWallet is
     require(_signer == signer, "Invalid meta-transaction signer");
     nonce = nonce.add(1);
 
+    // TODO: ask Contracts
     uint256 buffer1 = 4949; // TODO: determine this constant (gas required for operations after destination.call.value)
-    uint256 buffer2 = 4747; // TODO: determine this constant (gas required for operations after msg.sender.transfer)
+    uint256 buffer2 = 4747; // TODO: determine this constant (gas required for operations after and including msg.sender.transfer)
 
     if (address(this).balance >= metaGasLimit.add(buffer1).mul(tx.gasprice).add(value)) {
       (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data);
@@ -426,12 +425,12 @@ contract MetaTransactionWallet is
       returnData
     );
 
-    msg.sender.transfer(gasLimit.sub(gasLeft()).sub(partialRefund).add(buffer2).mul(tx.gasprice));
+    msg.sender.transfer(gasLimit.sub(gasLeft()).add(buffer2).mul(tx.gasprice));
     return returnData;
   }
 
   /**
-   * @notice Executes a transaction on behalf of the signer.`
+   * @notice Executes a transaction on behalf of the signer.
    * @param destination The address to which the transaction is to be sent.
    * @param value The CELO value to be sent with the transaction.
    * @param data The data to be sent with the transaction.
