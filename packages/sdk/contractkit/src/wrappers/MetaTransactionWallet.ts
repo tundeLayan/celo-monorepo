@@ -24,7 +24,19 @@ export interface RawTransaction {
   data: string
 }
 
-export type TransactionInput<T> = CeloTxObject<T> | TransactionObjectWithValue<T> | RawTransaction
+export interface RawTransactionWithRefund extends RawTransaction {
+  maxGasPrice: number
+  gasLimit: number
+  metaGasLimit: number
+  gasCurrency: string
+}
+
+//These are the types we care about
+export type TransactionInput<T> =
+  | CeloTxObject<T>
+  | TransactionObjectWithValue<T>
+  | RawTransaction
+  | RawTransactionWithRefund
 
 /**
  * Class that wraps the MetaTransactionWallet
@@ -85,6 +97,39 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   }
 
   /**
+   * Execute a signed refundable meta transaction
+   * Reverts if meta-tx signer is not a signer for the wallet
+   * @param tx a TransactionInput
+   * @param signature a Signature
+   */
+  public executeMetaTransactionWithRefund(
+    tx: TransactionInput<any>,
+    signature: Signature,
+    maxGasPrice: number,
+    gasLimit: number,
+    metaGasLimit: number,
+    gasCurrency: string
+  ): CeloTransactionObject<string> {
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+
+    return toTransactionObject(
+      this.kit.connection,
+      this.contract.methods.executeMetaTransactionWithRefund(
+        rawTx.destination,
+        rawTx.value,
+        rawTx.data,
+        rawTx.maxGasPrice,
+        rawTx.gasLimit,
+        rawTx.metaGasLimit,
+        rawTx.gasCurrency,
+        signature.v,
+        signature.r,
+        signature.s
+      )
+    )
+  }
+
+  /**
    * Signs a meta transaction as EIP712 typed data
    * @param tx a TransactionWrapper
    * @param nonce Optional -- will query contract state if not passed
@@ -105,7 +150,34 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   }
 
   /**
-   * Execute a signed meta transaction
+   * Signs a refundable meta transaction as EIP712 typed data
+   * @param tx a TransactionWrapper
+   * @param nonce Optional -- will query contract state if not passed
+   * @returns signature a Signature
+   */
+  public async signMetaTransactionWithRefund(
+    tx: TransactionInput<any>,
+    maxGasPrice: number,
+    gasLimit: number,
+    metaGasLimit: number,
+    gasCurrency: string,
+    nonce?: number
+  ): Promise<Signature> {
+    if (nonce === undefined) {
+      nonce = await this.nonce()
+    }
+    const typedData = buildMetaTxWithRefundTypedData(
+      this.address,
+      toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency),
+      nonce,
+      await this.chainId()
+    )
+    const signer = await this.signer()
+    return this.kit.connection.signTypedData(signer, typedData)
+  }
+
+  /**
+   * Sign and execute a signed meta transaction
    * Reverts if meta-tx signer is not a signer for the wallet
    * @param tx a TransactionInput
    */
@@ -116,6 +188,35 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     return this.executeMetaTransaction(tx, signature)
   }
 
+  /**
+   * Sign and execute a refundable meta transaction
+   * Reverts if meta-tx signer is not a signer for the wallet
+   * @param tx a TransactionInput
+   */
+  public async signAndExecuteMetaTransactionWithRefund(
+    tx: TransactionInput<any>,
+    maxGasPrice: number,
+    gasLimit: number,
+    metaGasLimit: number,
+    gasCurrency: string
+  ): Promise<CeloTransactionObject<string>> {
+    const signature = await this.signMetaTransactionWithRefund(
+      tx,
+      maxGasPrice,
+      gasLimit,
+      metaGasLimit,
+      gasCurrency
+    )
+    return this.executeMetaTransactionWithRefund(
+      tx,
+      signature,
+      maxGasPrice,
+      gasLimit,
+      metaGasLimit,
+      gasCurrency
+    )
+  }
+
   private getMetaTransactionDigestParams = (
     tx: TransactionInput<any>,
     nonce: number
@@ -124,9 +225,36 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     return [rawTx.destination, rawTx.value, rawTx.data, nonce]
   }
 
+  private getMetaTransactionWithRefundDigestParams = (
+    tx: TransactionInput<any>,
+    nonce: number,
+    maxGasPrice: number,
+    gasLimit: number,
+    metaGasLimit: number,
+    gasCurrency: string
+  ): [string, string, string, number, number, number, string, number] => {
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+    return [
+      rawTx.destination,
+      rawTx.value,
+      rawTx.data,
+      rawTx.maxGasPrice,
+      rawTx.gasLimit,
+      rawTx.metaGasLimit,
+      rawTx.gasCurrency,
+      nonce,
+    ]
+  }
+
   getMetaTransactionDigest = proxyCall(
     this.contract.methods.getMetaTransactionDigest,
     this.getMetaTransactionDigestParams,
+    stringIdentity
+  )
+
+  getMetaTransactionWithRefundDigest = proxyCall(
+    this.contract.methods.getMetaTransactionWithRefundDigest,
+    this.getMetaTransactionWithRefundDigestParams,
     stringIdentity
   )
 
@@ -146,9 +274,41 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
       signature.s,
     ]
   }
+
+  private getMetaTransactionWithRefundSignerParams = (
+    tx: TransactionInput<any>,
+    nonce: number,
+    signature: Signature,
+    maxGasPrice: number,
+    gasLimit: number,
+    metaGasLimit: number,
+    gasCurrency: string
+  ): [string, string, string, number, number, number, string, number, number, string, string] => {
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+    return [
+      rawTx.destination,
+      rawTx.value,
+      rawTx.data,
+      rawTx.maxGasPrice,
+      rawTx.gasLimit,
+      rawTx.metaGasLimit,
+      rawTx.gasCurrency,
+      nonce,
+      signature.v,
+      signature.r,
+      signature.s,
+    ]
+  }
+
   getMetaTransactionSigner = proxyCall(
     this.contract.methods.getMetaTransactionSigner,
     this.getMetaTransactionSignerParams,
+    stringIdentity
+  )
+
+  getMetaTransactionWithRefundSigner = proxyCall(
+    this.contract.methods.getMetaTransactionWithRefundSigner,
+    this.getMetaTransactionWithRefundSignerParams,
     stringIdentity
   )
 
@@ -226,6 +386,30 @@ export const toRawTransaction = (tx: TransactionInput<any>): RawTransaction => {
 }
 
 /**
+ * Turns any possible way to pass in a transaction into the raw values
+ * that are actually required for a transaction with a refund. This is used both internally to normalize
+ * ways in which transactions are passed in but also public in order
+ * for one instance of ContractKit to serialize a meta transaction to
+ * send over the wire and be consumed somewhere else.
+ * @param tx TransactionInput<any> union of all the ways we expect transactions
+ * @returns a RawTransactions that's serializable
+ */
+export const toRawTransactionWithRefund = (
+  tx: TransactionInput<any>,
+  maxGasPrice: number,
+  gasLimit: number,
+  metaGasLimit: number,
+  gasCurrency: string
+): RawTransactionWithRefund => {
+  if ('maxGasPrice' in tx) {
+    return tx
+  } else {
+    const rawTx = toRawTransaction(tx)
+    return { ...rawTx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency }
+  }
+}
+
+/**
  * Turns an array of transaction inputs into the argument that
  * need to be passed to the executeTransactions call.
  * Main transformation is that all the `data` parts of each
@@ -274,6 +458,42 @@ export const buildMetaTxTypedData = (
       ],
     },
     primaryType: 'ExecuteMetaTransaction',
+    domain: {
+      name: 'MetaTransactionWallet',
+      version: '1.1',
+      chainId,
+      verifyingContract: walletAddress,
+    },
+    message: tx ? { ...tx, nonce } : {},
+  }
+}
+
+export const buildMetaTxWithRefundTypedData = (
+  walletAddress: Address,
+  tx: RawTransactionWithRefund,
+  nonce: number,
+  chainId: number
+): EIP712TypedData => {
+  return {
+    types: {
+      EIP712Domain: [
+        { name: 'name', type: 'string' },
+        { name: 'version', type: 'string' },
+        { name: 'chainId', type: 'uint256' },
+        { name: 'verifyingContract', type: 'address' },
+      ],
+      ExecuteMetaTransactionWithRefund: [
+        { name: 'destination', type: 'address' },
+        { name: 'value', type: 'uint256' },
+        { name: 'data', type: 'bytes' },
+        { name: 'metaGasPrice', type: 'uint256' },
+        { name: 'gasLimit', type: 'uint256' },
+        { name: 'metaGasLimit', type: 'uint256' },
+        { name: 'gasCurrency', type: 'string' },
+        { name: 'nonce', type: 'uint256' },
+      ],
+    },
+    primaryType: 'ExecuteMetaTransactionWithRefund',
     domain: {
       name: 'MetaTransactionWallet',
       version: '1.1',

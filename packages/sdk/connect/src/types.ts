@@ -9,8 +9,26 @@ export interface CeloParams {
   gatewayFee: string
 }
 
+//FROM web3-core
+// export interface TransactionConfig {
+//   from?: string | number;
+//   to?: string;
+//   value?: number | string | BN;
+//   gas?: number | string;
+//   gasPrice?: number | string | BN;
+//   data?: string;
+//   nonce?: number;
+//   chainId?: number;
+//   common?: Common;
+//   chain?: string;
+//   hardfork?: string;
+// }
+
+//Partial makes all properties in CeloParams optional
+//So all properties of CeloTx are optional
 export type CeloTx = TransactionConfig & Partial<CeloParams>
 
+//Celo Tx Object IMPORTANT
 export interface CeloTxObject<T> {
   arguments: any[]
   call(tx?: CeloTx): Promise<T>

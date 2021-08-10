@@ -35,6 +35,10 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
   let gold: GoldTokenWrapper
   let emptyAccounts: Address[]
   let rando: Address
+  let maxGasPrice: number
+  let gasLimit: number
+  let metaGasLimit: number
+  let gasCurrency: string
 
   beforeAll(async () => {
     accounts = await web3.eth.getAccounts()
@@ -43,6 +47,10 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
     kit.defaultAccount = walletSigner
     rando = accounts[2]
     gold = await kit.contracts.getGoldToken()
+    maxGasPrice = 2
+    gasLimit = 4747
+    metaGasLimit = 4949
+    gasCurrency = 'Celo'
   })
 
   beforeEach(async () => {
@@ -223,6 +231,78 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
       })
     })
   })
+
+  // describe('#executeMetaTransactionWithRefund', () => {
+  //   describe('as a rando', () => {
+  //     it('can execute transactions', async () => {
+  //       const walletBalanceBefore = await gold.balanceOf(wallet.address)
+  //       const value = new BigNumber(1e18)
+
+  //       const metaTransfer = gold.transfer(emptyAccounts[0], value.toFixed()).txo
+  //       const signature = await wallet.signMetaTransactionWithRefund(metaTransfer, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+
+  //       const result = await wallet
+  //         .executeMetaTransactionWithRefund(metaTransfer, signature, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+  //         .sendAndWaitForReceipt({ from: rando })
+  //       expect(result.status).toBe(true)
+
+  //       expect(await gold.balanceOf(emptyAccounts[0])).toEqual(value)
+  //       expect(await gold.balanceOf(wallet.address)).toEqual(walletBalanceBefore.minus(value))
+  //     })
+
+  //     //not sure what this means or if it applies to MTx with refund
+  //     it('can batch transactions as a call to self', async () => {
+  //       const walletBalanceBefore = await gold.balanceOf(wallet.address)
+  //       const value = new BigNumber(1e18)
+  //       const metaBatch = wallet.executeTransactions([
+  //         gold.transfer(emptyAccounts[0], value.toFixed()).txo,
+  //         gold.transfer(emptyAccounts[1], value.toFixed()).txo,
+  //         gold.transfer(emptyAccounts[2], value.toFixed()).txo,
+  //       ]).txo
+
+  //       const signature = await wallet.signMetaTransaction(metaBatch, 0)
+  //       const result = await wallet
+  //         .executeMetaTransaction(metaBatch, signature)
+  //         .sendAndWaitForReceipt({ from: rando })
+  //       expect(result.status).toBe(true)
+
+  //       expect(await gold.balanceOf(wallet.address)).toEqual(
+  //         walletBalanceBefore.minus(value.times(3))
+  //       )
+  //       for (let i = 0; i < 3; i++) {
+  //         expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
+  //       }
+  //     })
+  //   })
+
+  //   describe('when passed over the wire', () => {
+  //     it('can hydrate and execute directly', async () => {
+  //       const walletBalanceBefore = await gold.balanceOf(wallet.address)
+  //       const value = new BigNumber(1e18)
+  //       const metaTx = wallet.executeTransactions([
+  //         gold.transfer(emptyAccounts[0], value.toFixed()).txo,
+  //         gold.transfer(emptyAccounts[1], value.toFixed()).txo,
+  //         gold.transfer(emptyAccounts[2], value.toFixed()).txo,
+  //       ]).txo
+  //       const signature = await wallet.signMetaTransaction(metaTx, 0)
+  //       const rawTx = toRawTransaction(metaTx)
+  //       const payload = JSON.stringify({ rawTx, signature })
+  //       // Now we're somewhere else:
+  //       const resp: { rawTx: RawTransaction; signature: Signature } = JSON.parse(payload)
+  //       const result = await wallet
+  //         .executeMetaTransaction(resp.rawTx, resp.signature)
+  //         .sendAndWaitForReceipt({ from: rando })
+  //       expect(result.status).toBe(true)
+
+  //       expect(await gold.balanceOf(wallet.address)).toEqual(
+  //         walletBalanceBefore.minus(value.times(3))
+  //       )
+  //       for (let i = 0; i < 3; i++) {
+  //         expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
+  //       }
+  //     })
+  //   })
+  // })
 
   describe('#signAndExecuteMetaTransaction', () => {
     describe('as a rando', () => {

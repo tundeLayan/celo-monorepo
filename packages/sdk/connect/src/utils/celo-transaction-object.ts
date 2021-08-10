@@ -2,12 +2,13 @@ import { Connection } from '../connection'
 import { CeloTx, CeloTxObject, CeloTxReceipt } from '../types'
 import { TransactionResult } from './tx-result'
 
+//omits 'data' property
 export type CeloTransactionParams = Omit<CeloTx, 'data'>
 
 export function toTransactionObject<O>(
-  connection: Connection,
-  txo: CeloTxObject<O>,
-  defaultParams?: CeloTransactionParams
+  connection: Connection, //??
+  txo: CeloTxObject<O>, //List of arguments + Tx methods
+  defaultParams?: CeloTransactionParams //Tx properties without data property
 ): CeloTransactionObject<O> {
   return new CeloTransactionObject(connection, txo, defaultParams)
 }
