@@ -67,10 +67,13 @@ spec:
           - "-nodeUri={{ .Values.web3Provider }}"
           - "-datadir=/root/.eksportisto"
           - "-sensitiveAccounts=/root/.eksportisto/sensitive-accounts.json"
+        env:
+        - name: GOGC
+          value: "11300"
         resources:
           requests:
-            memory: 100Mi
-            cpu: 1700m
+            memory: 2Gi
+            cpu: 1800m
         ports:
         - name: prometheus
           containerPort: 8080
