@@ -23,7 +23,6 @@ import {
   REGISTRY_ADDRESS,
   TEMPLATE,
 } from './genesis_constants'
-import { getIndexForLoadTestThread } from './geth'
 import { GenesisConfig } from './interfaces/genesis-config'
 import { ensure0x, strip0x } from './utils'
 
@@ -199,26 +198,6 @@ const getFaucetedAccountsFor = (
   }))
 }
 
-const getFaucetedAccountsForLoadTest = (
-  accountType: AccountType,
-  mnemonic: string,
-  clients: number,
-  threads: number,
-  balance: string
-) => {
-  const addresses: string[] = []
-  for (const podIndex of range(0, clients)) {
-    for (const threadIndex of range(0, threads)) {
-      const index = getIndexForLoadTestThread(podIndex, threadIndex)
-      addresses.push(strip0x(generateAddress(mnemonic, accountType, parseInt(`${index}`, 10))))
-    }
-  }
-  return addresses.map((address) => ({
-    address,
-    balance,
-  }))
-}
-
 export const getFaucetedAccounts = (mnemonic: string) => {
   const numFaucetAccounts = parseInt(fetchEnvOrFallback(envVar.FAUCET_GENESIS_ACCOUNTS, '0'), 10)
   const faucetAccounts = getFaucetedAccountsFor(
@@ -229,13 +208,10 @@ export const getFaucetedAccounts = (mnemonic: string) => {
   )
 
   const numLoadTestAccounts = parseInt(fetchEnvOrFallback(envVar.LOAD_TEST_CLIENTS, '0'), 10)
-  const numLoadTestThreads = parseInt(fetchEnvOrFallback(envVar.LOAD_TEST_THREADS, '0'), 10)
-
-  const loadTestAccounts = getFaucetedAccountsForLoadTest(
+  const loadTestAccounts = getFaucetedAccountsFor(
     AccountType.LOAD_TESTING_ACCOUNT,
     mnemonic,
     numLoadTestAccounts,
-    numLoadTestThreads,
     faucetBalance()
   )
 
@@ -268,9 +244,9 @@ const hardForkActivationBlock = (key: string) => {
 
 export const generateGenesisFromEnv = (enablePetersburg: boolean = true) => {
   const mnemonic = fetchEnv(envVar.MNEMONIC)
-  const validatorEnv = parseInt(fetchEnv(envVar.VALIDATORS), 10)
+  const validatorEnv = fetchEnv(envVar.VALIDATORS)
   const genesisAccountsEnv = fetchEnvOrFallback(envVar.GENESIS_ACCOUNTS, '')
-  const validators = getValidatorsInformation(mnemonic, validatorEnv)
+  const validators = getValidatorsInformation(mnemonic, parseInt(validatorEnv, 10))
 
   const consensusType = fetchEnv(envVar.CONSENSUS_TYPE) as ConsensusType
 
@@ -460,7 +436,9 @@ export const generateGenesis = ({
     }
   }
 
-  genesis.timestamp = timestamp > 0 ? timestamp.toString() : '0x0'
+  if (timestamp > 0) {
+    genesis.timestamp = timestamp.toString()
+  }
 
   return JSON.stringify(genesis, null, 2)
 }

@@ -36,6 +36,7 @@ describe('Running against a deployed service', () => {
         account: '0x1234',
         authenticationMethod: AuthenticationMethod.WALLET_KEY,
         blindedQueryPhoneNumber: BLINDED_PHONE_NUMBER,
+        timestamp: Date.now(),
         version: 'ignore',
         sessionID: genSessionID(),
       }
@@ -50,6 +51,7 @@ describe('Running against a deployed service', () => {
         account: ACCOUNT_ADDRESS,
         authenticationMethod: AuthenticationMethod.WALLET_KEY,
         blindedQueryPhoneNumber: '',
+        timestamp: Date.now(),
         version: 'ignore',
         sessionID: genSessionID(),
       }
@@ -65,6 +67,7 @@ describe('Running against a deployed service', () => {
         account: ACCOUNT_ADDRESS,
         authenticationMethod: AuthenticationMethod.WALLET_KEY,
         blindedQueryPhoneNumber: BLINDED_PHONE_NUMBER,
+        timestamp: Date.now(),
         version: 'ignore',
       }
       await expect(
@@ -89,12 +92,14 @@ describe('Running against a deployed service', () => {
   describe('With enough quota', () => {
     // if these tests are failing, it may just be that the address needs to be fauceted:
     // celotooljs account faucet --account 0x1be31a94361a391bbafb2a4ccd704f57dc04d4bb --dollar 1 --gold 1 -e <ENV> --verbose
+    const timestamp = Date.now()
     it('Returns sig when querying with unused and used request', async () => {
       await replenishQuota(ACCOUNT_ADDRESS, contractKit)
       const body: SignMessageRequest = {
         account: ACCOUNT_ADDRESS,
         authenticationMethod: AuthenticationMethod.WALLET_KEY,
         blindedQueryPhoneNumber: BLINDED_PHONE_NUMBER,
+        timestamp,
         version: 'ignore',
         sessionID: genSessionID(),
       }

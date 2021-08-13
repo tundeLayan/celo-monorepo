@@ -3,10 +3,11 @@ import {
   ErrorMessage,
   GetBlindedMessageSigRequest,
   hasValidAccountParam,
-  hasValidBlindedPhoneNumberParam,
-  identifierIsValidIfExists,
+  hasValidQueryPhoneNumberParam,
+  hasValidTimestamp,
   isBodyReasonablySized,
   MAX_BLOCK_DISCREPANCY_THRESHOLD,
+  phoneNumberHashIsValidIfExists,
   SignMessageResponse,
   SignMessageResponseFailure,
   SignMessageResponseSuccess,
@@ -353,9 +354,10 @@ function getMajorityErrorCode(errorCodes: Map<number, number>, logger: Logger) {
 function isValidGetSignatureInput(requestBody: GetBlindedMessageSigRequest): boolean {
   return (
     hasValidAccountParam(requestBody) &&
-    hasValidBlindedPhoneNumberParam(requestBody) &&
-    identifierIsValidIfExists(requestBody) &&
-    isBodyReasonablySized(requestBody)
+    hasValidQueryPhoneNumberParam(requestBody) &&
+    phoneNumberHashIsValidIfExists(requestBody) &&
+    isBodyReasonablySized(requestBody) &&
+    hasValidTimestamp(requestBody)
   )
 }
 

@@ -132,7 +132,6 @@
           nexmo_blacklist              = ""
           twilio_account_sid           = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
           twilio_messaging_service_sid = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-          twilio_verify_service_sid    = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
           twilio_auth_token            = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
           twilio_blacklist             = ""
       }

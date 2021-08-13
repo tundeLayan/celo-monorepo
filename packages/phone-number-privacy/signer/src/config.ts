@@ -39,7 +39,6 @@ interface Config {
     additionalVerifiedQueryMax: number
     queryPerTransaction: number
     minDollarBalance: BigNumber
-    minEuroBalance: BigNumber
     minCeloBalance: BigNumber
   }
   attestations: {
@@ -95,8 +94,6 @@ const config: Config = {
     queryPerTransaction: toNum(env.QUERY_PER_TRANSACTION) || 2,
     // Min balance is .01 cUSD
     minDollarBalance: new BigNumber(env.MIN_DOLLAR_BALANCE || 1e16),
-    // Min balance is .01 cEUR
-    minEuroBalance: new BigNumber(env.MIN_DOLLAR_BALANCE || 1e16),
     // Min balance is .005 CELO
     minCeloBalance: new BigNumber(env.MIN_DOLLAR_BALANCE || 5e15),
   },

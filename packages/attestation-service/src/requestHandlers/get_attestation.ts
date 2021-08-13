@@ -77,12 +77,7 @@ class GetAttestationRequestHandler {
       }
 
       // Security code is supplied. Check it's correct.
-      // Check with both methods (can remove second method after 1.3.0)
-      if (
-        attestation.securityCode &&
-        (attestation.securityCode.slice(1) === this.getRequest.securityCode ||
-          attestation.securityCode === this.getRequest.securityCode)
-      ) {
+      if (attestation.securityCode === this.getRequest.securityCode) {
         callback(attestation, attestation.attestationCode)
         await transaction.commit()
         return

@@ -1,14 +1,14 @@
 import { retryAsyncWithBackOffAndTimeout } from '@celo/base'
-import { NULL_ADDRESS, StableToken } from '@celo/contractkit'
+import { NULL_ADDRESS } from '@celo/contractkit'
 import {
   authenticateUser,
   ErrorMessage,
   FULL_NODE_TIMEOUT_IN_MS,
   GetQuotaRequest,
   hasValidAccountParam,
-  identifierIsValidIfExists,
   isBodyReasonablySized,
   isVerified,
+  phoneNumberHashIsValidIfExists,
   RETRY_COUNT,
   RETRY_DELAY_IN_MS,
   WarningMessage,
@@ -68,7 +68,7 @@ export async function handleGetQuota(
 function isValidGetQuotaInput(requestBody: GetQuotaRequest): boolean {
   return (
     hasValidAccountParam(requestBody) &&
-    identifierIsValidIfExists(requestBody) &&
+    phoneNumberHashIsValidIfExists(requestBody) &&
     isBodyReasonablySized(requestBody)
   )
 }
@@ -159,15 +159,11 @@ async function _getQueryQuota(logger: Logger, account: string, hashedPhoneNumber
     .labels('balances')
     .startTimer()
   let cUSDAccountBalance = new BigNumber(0)
-  let cEURAccountBalance = new BigNumber(0)
   let celoAccountBalance = new BigNumber(0)
 
   await Promise.all([
     new Promise((resolve) => {
-      resolve(getStableTokenBalance(StableToken.cUSD, logger, account, walletAddress))
-    }),
-    new Promise((resolve) => {
-      resolve(getStableTokenBalance(StableToken.cEUR, logger, account, walletAddress))
+      resolve(getDollarBalance(logger, account, walletAddress))
     }),
     new Promise((resolve) => {
       resolve(getCeloBalance(logger, account, walletAddress))
@@ -175,15 +171,13 @@ async function _getQueryQuota(logger: Logger, account: string, hashedPhoneNumber
   ])
     .then((values) => {
       cUSDAccountBalance = values[0] as BigNumber
-      cEURAccountBalance = values[1] as BigNumber
-      celoAccountBalance = values[2] as BigNumber
+      celoAccountBalance = values[1] as BigNumber
     })
     .finally(getBalancesMeter)
 
-  // Min balance can be in either cUSD, cEUR or CELO
+  // Min balance can be in either cUSD or CELO
   if (
     cUSDAccountBalance.isGreaterThanOrEqualTo(config.quota.minDollarBalance) ||
-    cEURAccountBalance.isGreaterThanOrEqualTo(config.quota.minEuroBalance) ||
     celoAccountBalance.isGreaterThanOrEqualTo(config.quota.minCeloBalance)
   ) {
     Counters.requestsWithUnverifiedAccountWithMinBalance.inc()
@@ -191,10 +185,8 @@ async function _getQueryQuota(logger: Logger, account: string, hashedPhoneNumber
       {
         account,
         cUSDAccountBalance,
-        cEURAccountBalance,
         celoAccountBalance,
         minDollarBalance: config.quota.minDollarBalance,
-        minEuroBalance: config.quota.minEuroBalance,
         minCeloBalance: config.quota.minCeloBalance,
       },
       'Account is not verified but meets min balance'
@@ -216,10 +208,8 @@ async function _getQueryQuota(logger: Logger, account: string, hashedPhoneNumber
   logger.trace({
     account,
     cUSDAccountBalance,
-    cEURAccountBalance,
     celoAccountBalance,
     minDollarBalance: config.quota.minDollarBalance,
-    minEuroBalance: config.quota.minEuroBalance,
     minCeloBalance: config.quota.minCeloBalance,
     quota: 0,
   })
@@ -256,18 +246,13 @@ export async function getTransactionCount(logger: Logger, ...addresses: string[]
   return res
 }
 
-export async function getStableTokenBalance(
-  stableToken: StableToken,
-  logger: Logger,
-  ...addresses: string[]
-): Promise<BigNumber> {
+export async function getDollarBalance(logger: Logger, ...addresses: string[]): Promise<BigNumber> {
   return Promise.all(
     addresses
       .filter((address) => address !== NULL_ADDRESS)
       .map((address) =>
         retryAsyncWithBackOffAndTimeout(
-          async () =>
-            (await getContractKit().contracts.getStableToken(stableToken)).balanceOf(address),
+          async () => (await getContractKit().contracts.getStableToken()).balanceOf(address),
           RETRY_COUNT,
           [],
           RETRY_DELAY_IN_MS,
@@ -281,7 +266,7 @@ export async function getStableTokenBalance(
   ).then((values) => {
     logger.trace(
       { addresses, balances: values.map((bn) => bn.toString()) },
-      `Fetched ${stableToken} balances for addresses`
+      'Fetched cusd balances for addresses'
     )
     return values.reduce((a, b) => a.plus(b))
   })

@@ -26,7 +26,6 @@ const contextFullNodeDeploymentEnvVars: {
   rollingUpdatePartition: DynamicEnvVar.FULL_NODES_ROLLING_UPDATE_PARTITION,
   rpcApis: DynamicEnvVar.FULL_NODES_RPC_API_METHODS,
   gcMode: DynamicEnvVar.FULL_NODES_GETH_GC_MODE,
-  wsPort: DynamicEnvVar.FULL_NODES_WS_PORT,
   useGstoreData: DynamicEnvVar.FULL_NODES_USE_GSTORAGE_DATA,
 }
 
@@ -86,7 +85,7 @@ export async function installFullNodeChart(
   createNEG: boolean = false
 ) {
   const deployer = getFullNodeDeployerForContext(celoEnv, context, staticNodes, createNEG)
-  const enodes = await deployer.installChart(context)
+  const enodes = await deployer.installChart()
   if (enodes) {
     await uploadStaticNodeEnodes(celoEnv, context, enodes)
   }
@@ -104,7 +103,7 @@ export async function upgradeFullNodeChart(
   createNEG: boolean = false
 ) {
   const deployer = getFullNodeDeployerForContext(celoEnv, context, generateNodeKeys, createNEG)
-  const enodes = await deployer.upgradeChart(context, reset)
+  const enodes = await deployer.upgradeChart(reset)
   if (enodes) {
     await uploadStaticNodeEnodes(celoEnv, context, enodes)
   }
@@ -156,7 +155,6 @@ function getFullNodeDeploymentConfig(context: string): BaseFullNodeDeploymentCon
     rollingUpdatePartition: parseInt(fullNodeDeploymentEnvVarValues.rollingUpdatePartition, 10),
     rpcApis: fullNodeDeploymentEnvVarValues.rpcApis,
     gcMode: fullNodeDeploymentEnvVarValues.gcMode,
-    wsPort: parseInt(fullNodeDeploymentEnvVarValues.wsPort, 10),
     useGstoreData: fullNodeDeploymentEnvVarValues.useGstoreData,
   }
   return fullNodeDeploymentConfig

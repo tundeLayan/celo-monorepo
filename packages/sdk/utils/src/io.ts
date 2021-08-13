@@ -90,7 +90,6 @@ export const AttestationServiceStatusResponseType = t.type({
   smsProvidersRandomized: t.boolean,
   maxDeliveryAttempts: t.number,
   maxRerequestMins: t.number,
-  twilioVerifySidProvided: t.boolean,
 })
 
 export const AttestationServiceTestRequestType = t.type({

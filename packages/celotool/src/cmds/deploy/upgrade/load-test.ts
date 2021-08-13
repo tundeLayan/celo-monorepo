@@ -1,7 +1,11 @@
-import { builder as initialBuilder, LoadTestArgv } from 'src/cmds/deploy/initial/load-test'
+import {
+  builder as initialBuilder,
+  LoadTestArgv,
+  setArgvDefaults,
+} from 'src/cmds/deploy/initial/load-test'
 import { switchToClusterFromEnv } from 'src/lib/cluster'
 import { isCelotoolHelmDryRun } from 'src/lib/helm_deploy'
-import { resetAndUpgrade, setArgvDefaults, upgradeHelmChart } from 'src/lib/load-test'
+import { resetAndUpgrade, upgradeHelmChart } from 'src/lib/load-test'
 import yargs from 'yargs'
 
 export const command = 'load-test'
@@ -25,20 +29,8 @@ export const handler = async (argv: LoadTestUpgradeArgv) => {
   setArgvDefaults(argv)
 
   if (argv.reset === true && !isCelotoolHelmDryRun()) {
-    await resetAndUpgrade(
-      argv.celoEnv,
-      argv.blockscoutMeasurePercent,
-      argv.delay,
-      argv.replicas,
-      argv.threads
-    )
+    await resetAndUpgrade(argv.celoEnv, argv.blockscoutMeasurePercent, argv.delay, argv.replicas)
   } else {
-    await upgradeHelmChart(
-      argv.celoEnv,
-      argv.blockscoutMeasurePercent,
-      argv.delay,
-      argv.replicas,
-      argv.threads
-    )
+    await upgradeHelmChart(argv.celoEnv, argv.blockscoutMeasurePercent, argv.delay, argv.replicas)
   }
 }

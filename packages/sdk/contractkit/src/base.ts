@@ -15,7 +15,6 @@ export enum CeloContract {
   GasPriceMinimum = 'GasPriceMinimum',
   GoldToken = 'GoldToken',
   Governance = 'Governance',
-  GrandaMento = 'GrandaMento',
   LockedGold = 'LockedGold',
   MetaTransactionWallet = 'MetaTransactionWallet',
   MetaTransactionWalletDeployer = 'MetaTransactionWalletDeployer',

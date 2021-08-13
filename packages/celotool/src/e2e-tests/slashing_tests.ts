@@ -97,7 +97,7 @@ describe('slashing tests', function (this: any) {
     network: 'local',
     networkId: 1101,
     runPath: TMP_PATH,
-    migrate: true,
+    useMycelo: true,
     genesisConfig: {
       churritoBlock: 0,
       donutBlock: 0,

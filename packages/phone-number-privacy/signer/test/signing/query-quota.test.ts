@@ -1,5 +1,4 @@
 import { isVerified, rootLogger } from '@celo/phone-number-privacy-common'
-import { StableToken } from '@celo/contractkit'
 import BigNumber from 'bignumber.js'
 import allSettled from 'promise.allsettled'
 import {
@@ -119,47 +118,15 @@ describe(getRemainingQueryCount, () => {
       totalQuota: 0,
     })
   })
-  it('Calculates remaining query count for unverified account with cUSD balance', async () => {
+  it('Calculates remaining query count for unverified account with only cUSD balance', async () => {
     const contractKitVerifiedNoTx = createMockContractKit(
       {
         [ContractRetrieval.getAttestations]: createMockAttestation(0, 0),
-        [ContractRetrieval.getStableToken]: createMockToken(new BigNumber(0)),
+        [ContractRetrieval.getStableToken]: createMockToken(new BigNumber(200000000000000000)),
         [ContractRetrieval.getGoldToken]: createMockToken(new BigNumber(0)),
         [ContractRetrieval.getAccounts]: createMockAccounts('0x0'),
       },
       createMockWeb3(0)
-    )
-    contractKitVerifiedNoTx.contracts[ContractRetrieval.getStableToken] = jest.fn(
-      (stableToken: StableToken) => {
-        return stableToken === StableToken.cUSD
-          ? createMockToken(new BigNumber(200000000000000000))
-          : createMockToken(new BigNumber(0))
-      }
-    )
-    mockPerformedQueryCount.mockImplementation(() => new Promise((resolve) => resolve(1)))
-    mockIsVerified.mockReturnValue(false)
-    mockGetContractKit.mockImplementation(() => contractKitVerifiedNoTx)
-    expect(await getRemainingQueryCount(rootLogger, mockAccount, mockPhoneNumber)).toEqual({
-      performedQueryCount: 1,
-      totalQuota: 10,
-    })
-  })
-  it('Calculates remaining query count for unverified account with cEUR balance', async () => {
-    const contractKitVerifiedNoTx = createMockContractKit(
-      {
-        [ContractRetrieval.getAttestations]: createMockAttestation(0, 0),
-        [ContractRetrieval.getStableToken]: createMockToken(new BigNumber(0)),
-        [ContractRetrieval.getGoldToken]: createMockToken(new BigNumber(0)),
-        [ContractRetrieval.getAccounts]: createMockAccounts('0x0'),
-      },
-      createMockWeb3(0)
-    )
-    contractKitVerifiedNoTx.contracts[ContractRetrieval.getStableToken] = jest.fn(
-      (stableToken: StableToken) => {
-        return stableToken === StableToken.cEUR
-          ? createMockToken(new BigNumber(200000000000000000))
-          : createMockToken(new BigNumber(0))
-      }
     )
     mockPerformedQueryCount.mockImplementation(() => new Promise((resolve) => resolve(1)))
     mockIsVerified.mockReturnValue(false)

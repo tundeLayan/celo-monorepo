@@ -177,7 +177,7 @@ describe('governance tests', () => {
   const gethConfig: GethRunConfig = {
     runPath: TMP_PATH,
     verbosity: 3,
-    migrate: true,
+    useMycelo: true,
     networkId: 1101,
     network: 'local',
     genesisConfig: {

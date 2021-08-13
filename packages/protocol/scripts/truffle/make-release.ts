@@ -80,8 +80,7 @@ const deployImplementation = async (
   contractName: string,
   Contract: TruffleContract<Truffle.ContractInstance>,
   dryRun: boolean,
-  from: string,
-  requireVersion = true
+  from: string
 ) => {
   const testingDeployment = false
   if (from) {
@@ -96,7 +95,7 @@ const deployImplementation = async (
   const getVersionNumberAbi = contract.abi.find(
     (abi: any) => abi.type === 'function' && abi.name === 'getVersionNumber'
   )
-  if (requireVersion && !getVersionNumberAbi) {
+  if (!getVersionNumberAbi) {
     throw new Error(`Contract ${contractName} has changes but does not specify a version number`)
   }
   return contract
@@ -209,7 +208,7 @@ const deployLibrary = async (
   isDryRun: boolean,
   from: string
 ) => {
-  const contract = await deployImplementation(contractName, contractArtifact, isDryRun, from, false)
+  const contract = await deployImplementation(contractName, contractArtifact, isDryRun, from)
   addresses.set(contractName, contract.address)
   return
 }

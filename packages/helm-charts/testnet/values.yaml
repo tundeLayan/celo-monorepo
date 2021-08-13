@@ -37,7 +37,6 @@ geth:
     #   memory: "4Gi"
     #   cpu: "4"
   fullnodeCheckBlockAge: true
-  ws_port: 8546
 
 # UpdateStrategy for statefulsets only. Partition=0 is default rollingUpdate behaviour.
 updateStrategy:

@@ -106,12 +106,7 @@ variable twilio_account_sid {
 
 variable twilio_messaging_service_sid {
   type        = string
-  description = "Twilio account messaging service SID (check twilio documentation)"
-}
-
-variable twilio_verify_service_sid {
-  type        = string
-  description = "Twilio account verify service SID (check twilio documentation)"
+  description = "Twilio account messagin service SID (check twilio documentation)"
 }
 
 variable twilio_auth_token {

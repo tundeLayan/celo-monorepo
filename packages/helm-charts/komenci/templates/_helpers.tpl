@@ -5,16 +5,8 @@ The name of the deployment
 {{- .Values.environment.name -}}-relayer
 {{- end -}}
 
-{{- define "rewards-relayer-name" -}}
-{{- .Values.environment.name -}}-rewards-relayer
-{{- end -}}
-
 {{- define "komenci-onboarding-fullname" -}}
 {{- .Values.environment.name -}}-onboarding
-{{- end -}}
-
-{{- define "komenci-rewards-fullname" -}}
-{{- .Values.environment.name -}}-rewards
 {{- end -}}
 
 {{/*
@@ -50,20 +42,6 @@ app.kubernetes.io/component: komenci-onboarding
 {{- end -}}
 
 {{/*
-Label specific to the komenci rewards component
-*/}}
-{{- define "komenci-rewards-component-label" -}}
-app.kubernetes.io/component: komenci-rewards
-{{- end -}}
-
-{{/*
-Label specific to the komenci rewards relayer component
-*/}}
-{{- define "komenci-rewards-relayer-component-label" -}}
-app.kubernetes.io/component: komenci-rewards-relayer
-{{- end -}}
-
-{{/*
 The name of the azure identity binding for all relayers
 */}}
 {{- define "azure-identity-binding-name" -}}
@@ -71,22 +49,8 @@ The name of the azure identity binding for all relayers
 {{- end -}}
 
 {{/*
-The name of the azure identity binding for all rewards relayers
-*/}}
-{{- define "azure-rewards-identity-binding-name" -}}
-{{- with .dot -}}{{ template "rewards-relayer-name" . }}{{- end -}}-{{ .index }}-identity-binding
-{{- end -}}
-
-{{/*
-The name of the azure identity for all relayers
+The name of the azure identity for all oracles
 */}}
 {{- define "azure-identity-name" -}}
 {{- with .dot -}}{{ template "name" . }}{{- end -}}-{{ .index }}-identity
-{{- end -}}
-
-{{/*
-The name of the azure identity for all rewards relayers
-*/}}
-{{- define "azure-rewards-identity-name" -}}
-{{- with .dot -}}{{ template "rewards-relayer-name" . }}{{- end -}}-{{ .index }}-identity
 {{- end -}}

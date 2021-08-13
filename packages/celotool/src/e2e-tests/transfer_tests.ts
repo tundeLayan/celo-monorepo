@@ -170,7 +170,7 @@ describe('Transfer tests', function (this: any) {
 
   const syncModes = ['full', 'fast', 'light', 'lightest']
   const gethConfig: GethRunConfig = {
-    migrate: true,
+    useMycelo: true,
     networkId: 1101,
     network: 'local',
     runPath: TMP_PATH,
