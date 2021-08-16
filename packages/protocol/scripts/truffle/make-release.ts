@@ -88,6 +88,9 @@ const deployImplementation = async (
     Contract.defaults({ from }) // override truffle with provided from address
   }
   console.log(`Deploying ${contractName}`)
+  const balance = await web3.eth.getBalance(from)
+  console.log(`from: ${from}`)
+  console.log(`balance: ${balance}`)
   // Hack to trick truffle, which checks that the provided address has code
   const contract = await (dryRun
     ? Contract.at(celoRegistryAddress)
