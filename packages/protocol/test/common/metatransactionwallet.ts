@@ -546,11 +546,7 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
     const value = 100
     const destination = web3.utils.toChecksumAddress(web3.utils.randomHex(20))
     const data = '0x'
-    const maxGasPrice = 5
-    const gasLimit = 100
-    const metaGasLimit = 10
     let submitter
-    let submitterBalance
     let nonce
     let transferSigner
 
@@ -560,9 +556,6 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
         value,
         destination,
         data,
-        maxGasPrice,
-        gasLimit,
-        metaGasLimit,
         nonce,
       })
 
@@ -590,7 +583,6 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
         describe('when signed by the signer', () => {
           beforeEach(async () => {
             transferSigner = signer
-            submitterBalance = await web3.eth.getBalance(submitter)
             res = await doTransfer()
           })
 
@@ -598,25 +590,18 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
             assert.equal(await web3.eth.getBalance(destination), value)
           })
 
-          it('should refund sender', async () => {
-            //maybe check a range since it won't be exact, like within 1%
-            assert.equal(await web3.eth.getBalance(submitter), submitterBalance)
-          })
-
           it('should increment the nonce', async () => {
             assertEqualBN(await wallet.nonce(), 1)
           })
 
-          it('should emit the MetaTransactionWithRefundExecution event', () => {
+          it('should emit the MetaTransactionExecution event', () => {
             assertLogMatches2(res.logs[0], {
-              event: 'MetaTransactionWithRefundExecution',
+              event: 'MetaTransactionExecution',
               args: {
                 destination,
                 value,
                 data: null,
                 nonce: 0,
-                maxGasPrice,
-                metaGasLimit,
                 returnData: null,
               },
             })
