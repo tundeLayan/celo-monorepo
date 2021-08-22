@@ -28,7 +28,6 @@ export interface RawTransactionWithRefund extends RawTransaction {
   maxGasPrice: number
   gasLimit: number
   metaGasLimit: number
-  gasCurrency: string
 }
 
 //These are the types we care about
@@ -101,16 +100,18 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
    * Reverts if meta-tx signer is not a signer for the wallet
    * @param tx a TransactionInput
    * @param signature a Signature
+   * @param maxGasPrice maximum gas price the user is willing to pay
+   * @param gasLimit maximum amount of gas user is willing for entire transaction to use
+   * @param metaGasLimit maximum amount of gas user is willing for meta-transaction to use
    */
   public executeMetaTransactionWithRefund(
     tx: TransactionInput<any>,
     signature: Signature,
     maxGasPrice: number,
     gasLimit: number,
-    metaGasLimit: number,
-    gasCurrency: string
+    metaGasLimit: number
   ): CeloTransactionObject<string> {
-    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit)
 
     return toTransactionObject(
       this.kit.connection,
@@ -121,7 +122,6 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
         rawTx.maxGasPrice,
         rawTx.gasLimit,
         rawTx.metaGasLimit,
-        rawTx.gasCurrency,
         signature.v,
         signature.r,
         signature.s
@@ -160,7 +160,6 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     maxGasPrice: number,
     gasLimit: number,
     metaGasLimit: number,
-    gasCurrency: string,
     nonce?: number
   ): Promise<Signature> {
     if (nonce === undefined) {
@@ -168,7 +167,7 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     }
     const typedData = buildMetaTxWithRefundTypedData(
       this.address,
-      toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency),
+      toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit),
       nonce,
       await this.chainId()
     )
@@ -197,24 +196,15 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     tx: TransactionInput<any>,
     maxGasPrice: number,
     gasLimit: number,
-    metaGasLimit: number,
-    gasCurrency: string
+    metaGasLimit: number
   ): Promise<CeloTransactionObject<string>> {
     const signature = await this.signMetaTransactionWithRefund(
       tx,
       maxGasPrice,
       gasLimit,
-      metaGasLimit,
-      gasCurrency
+      metaGasLimit
     )
-    return this.executeMetaTransactionWithRefund(
-      tx,
-      signature,
-      maxGasPrice,
-      gasLimit,
-      metaGasLimit,
-      gasCurrency
-    )
+    return this.executeMetaTransactionWithRefund(tx, signature, maxGasPrice, gasLimit, metaGasLimit)
   }
 
   private getMetaTransactionDigestParams = (
@@ -230,19 +220,17 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     nonce: number,
     maxGasPrice: number,
     gasLimit: number,
-    metaGasLimit: number,
-    gasCurrency: string
-  ): [string, string, string, number, number, number, string, number] => {
-    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+    metaGasLimit: number
+  ): [string, string, string, number, number, number, number] => {
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit)
     return [
       rawTx.destination,
       rawTx.value,
       rawTx.data,
+      nonce,
       rawTx.maxGasPrice,
       rawTx.gasLimit,
       rawTx.metaGasLimit,
-      rawTx.gasCurrency,
-      nonce,
     ]
   }
 
@@ -281,19 +269,17 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
     signature: Signature,
     maxGasPrice: number,
     gasLimit: number,
-    metaGasLimit: number,
-    gasCurrency: string
-  ): [string, string, string, number, number, number, string, number, number, string, string] => {
-    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+    metaGasLimit: number
+  ): [string, string, string, number, number, number, number, number, string, string] => {
+    const rawTx = toRawTransactionWithRefund(tx, maxGasPrice, gasLimit, metaGasLimit)
     return [
       rawTx.destination,
       rawTx.value,
       rawTx.data,
+      nonce,
       rawTx.maxGasPrice,
       rawTx.gasLimit,
       rawTx.metaGasLimit,
-      rawTx.gasCurrency,
-      nonce,
       signature.v,
       signature.r,
       signature.s,
@@ -398,14 +384,13 @@ export const toRawTransactionWithRefund = (
   tx: TransactionInput<any>,
   maxGasPrice: number,
   gasLimit: number,
-  metaGasLimit: number,
-  gasCurrency: string
+  metaGasLimit: number
 ): RawTransactionWithRefund => {
   if ('maxGasPrice' in tx) {
     return tx
   } else {
     const rawTx = toRawTransaction(tx)
-    return { ...rawTx, maxGasPrice, gasLimit, metaGasLimit, gasCurrency }
+    return { ...rawTx, maxGasPrice, gasLimit, metaGasLimit }
   }
 }
 
@@ -486,11 +471,10 @@ export const buildMetaTxWithRefundTypedData = (
         { name: 'destination', type: 'address' },
         { name: 'value', type: 'uint256' },
         { name: 'data', type: 'bytes' },
-        { name: 'metaGasPrice', type: 'uint256' },
+        { name: 'nonce', type: 'uint256' },
+        { name: 'maxGasPrice', type: 'uint256' },
         { name: 'gasLimit', type: 'uint256' },
         { name: 'metaGasLimit', type: 'uint256' },
-        { name: 'gasCurrency', type: 'string' },
-        { name: 'nonce', type: 'uint256' },
       ],
     },
     primaryType: 'ExecuteMetaTransactionWithRefund',

@@ -1,5 +1,4 @@
 import { Address, ensureLeading0x } from '@celo/base/lib/address'
-import { Signature } from '@celo/base/lib/signatureUtils'
 import { testWithGanache } from '@celo/dev-utils/lib/ganache-test'
 import MTWContract from '@celo/protocol/build/contracts/MetaTransactionWallet.json'
 import { generateTypedDataHash } from '@celo/utils/lib/sign-typed-data-utils'
@@ -8,9 +7,10 @@ import { newKitFromWeb3 } from '../kit'
 import { GoldTokenWrapper } from './GoldTokenWrapper'
 import {
   buildMetaTxTypedData,
+  buildMetaTxWithRefundTypedData,
   MetaTransactionWalletWrapper,
-  RawTransaction,
   toRawTransaction,
+  toRawTransactionWithRefund,
 } from './MetaTransactionWallet'
 
 const contract = require('@truffle/contract')
@@ -38,7 +38,6 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
   let maxGasPrice: number
   let gasLimit: number
   let metaGasLimit: number
-  let gasCurrency: string
 
   beforeAll(async () => {
     accounts = await web3.eth.getAccounts()
@@ -47,10 +46,9 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
     kit.defaultAccount = walletSigner
     rando = accounts[2]
     gold = await kit.contracts.getGoldToken()
-    maxGasPrice = 2
-    gasLimit = 4747
-    metaGasLimit = 4949
-    gasCurrency = 'Celo'
+    maxGasPrice = 20
+    gasLimit = 1000000
+    metaGasLimit = 10000
   })
 
   beforeEach(async () => {
@@ -141,6 +139,27 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
     })
   })
 
+  describe('#getMetaTransactionWithRefundDigest', () => {
+    it('should match the digest created off-chain', async () => {
+      const metaTransfer = gold.transfer(emptyAccounts[0], 1000).txo
+      const onChainDigest = await wallet.getMetaTransactionWithRefundDigest(
+        metaTransfer,
+        0,
+        maxGasPrice,
+        gasLimit,
+        metaGasLimit
+      )
+      const typedData = buildMetaTxWithRefundTypedData(
+        wallet.address,
+        toRawTransactionWithRefund(metaTransfer, maxGasPrice, gasLimit, metaGasLimit),
+        0,
+        chainId
+      )
+      const offChainDigest = ensureLeading0x(generateTypedDataHash(typedData).toString('hex'))
+      expect(onChainDigest).toEqual(offChainDigest)
+    })
+  })
+
   describe('#getMetaTransactionSigner', () => {
     it('should match what is signed off-chain', async () => {
       const metaTransfer = gold.transfer(emptyAccounts[0], 1000000).txo
@@ -150,11 +169,47 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
     })
   })
 
+  describe('#getMetaTransactionWithRefundSigner', () => {
+    it('should match what is signed off-chain', async () => {
+      const metaTransfer = gold.transfer(emptyAccounts[0], 1000000).txo
+      const signature = await wallet.signMetaTransactionWithRefund(
+        metaTransfer,
+        maxGasPrice,
+        gasLimit,
+        metaGasLimit,
+        0
+      )
+      const signer = await wallet.getMetaTransactionWithRefundSigner(
+        metaTransfer,
+        0,
+        signature,
+        maxGasPrice,
+        gasLimit,
+        metaGasLimit
+      )
+      expect(signer).toEqual(walletSigner)
+    })
+  })
+
   describe('#signMetaTransaction', () => {
     describe('with an unlocked account', () => {
       it('returns a signature', async () => {
         const signature = await wallet.signMetaTransaction(
           gold.transfer(emptyAccounts[0], 1000).txo
+        )
+        expect(signature).toBeDefined()
+      })
+    })
+  })
+
+  describe('#signMetaTransactionWithRefund', () => {
+    describe('with an unlocked account', () => {
+      it('returns a signature', async () => {
+        const signature = await wallet.signMetaTransactionWithRefund(
+          gold.transfer(emptyAccounts[0], 1000).txo,
+          maxGasPrice,
+          gasLimit,
+          metaGasLimit
         )
         expect(signature).toBeDefined()
       })
@@ -179,130 +234,151 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
         expect(await gold.balanceOf(wallet.address)).toEqual(walletBalanceBefore.minus(value))
       })
 
-      it('can batch transactions as a call to self', async () => {
-        const walletBalanceBefore = await gold.balanceOf(wallet.address)
-        const value = new BigNumber(1e18)
-        const metaBatch = wallet.executeTransactions([
-          gold.transfer(emptyAccounts[0], value.toFixed()).txo,
-          gold.transfer(emptyAccounts[1], value.toFixed()).txo,
-          gold.transfer(emptyAccounts[2], value.toFixed()).txo,
-        ]).txo
+      //   it('can batch transactions as a call to self', async () => {
+      //     const walletBalanceBefore = await gold.balanceOf(wallet.address)
+      //     const value = new BigNumber(1e18)
+      //     const metaBatch = wallet.executeTransactions([
+      //       gold.transfer(emptyAccounts[0], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[1], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[2], value.toFixed()).txo,
+      //     ]).txo
 
-        const signature = await wallet.signMetaTransaction(metaBatch, 0)
-        const result = await wallet
-          .executeMetaTransaction(metaBatch, signature)
-          .sendAndWaitForReceipt({ from: rando })
-        expect(result.status).toBe(true)
+      //     const signature = await wallet.signMetaTransaction(metaBatch, 0)
+      //     const result = await wallet
+      //       .executeMetaTransaction(metaBatch, signature)
+      //       .sendAndWaitForReceipt({ from: rando })
+      //     expect(result.status).toBe(true)
 
-        expect(await gold.balanceOf(wallet.address)).toEqual(
-          walletBalanceBefore.minus(value.times(3))
-        )
-        for (let i = 0; i < 3; i++) {
-          expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
-        }
-      })
-    })
+      //     expect(await gold.balanceOf(wallet.address)).toEqual(
+      //       walletBalanceBefore.minus(value.times(3))
+      //     )
+      //     for (let i = 0; i < 3; i++) {
+      //       expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
+      //     }
+      //   })
+      // })
 
-    describe('when passed over the wire', () => {
-      it('can hydrate and execute directly', async () => {
-        const walletBalanceBefore = await gold.balanceOf(wallet.address)
-        const value = new BigNumber(1e18)
-        const metaTx = wallet.executeTransactions([
-          gold.transfer(emptyAccounts[0], value.toFixed()).txo,
-          gold.transfer(emptyAccounts[1], value.toFixed()).txo,
-          gold.transfer(emptyAccounts[2], value.toFixed()).txo,
-        ]).txo
-        const signature = await wallet.signMetaTransaction(metaTx, 0)
-        const rawTx = toRawTransaction(metaTx)
-        const payload = JSON.stringify({ rawTx, signature })
-        // Now we're somewhere else:
-        const resp: { rawTx: RawTransaction; signature: Signature } = JSON.parse(payload)
-        const result = await wallet
-          .executeMetaTransaction(resp.rawTx, resp.signature)
-          .sendAndWaitForReceipt({ from: rando })
-        expect(result.status).toBe(true)
+      // describe('when passed over the wire', () => {
+      //   it('can hydrate and execute directly', async () => {
+      //     const walletBalanceBefore = await gold.balanceOf(wallet.address)
+      //     const value = new BigNumber(1e18)
+      //     const metaTx = wallet.executeTransactions([
+      //       gold.transfer(emptyAccounts[0], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[1], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[2], value.toFixed()).txo,
+      //     ]).txo
+      //     const signature = await wallet.signMetaTransaction(metaTx, 0)
+      //     const rawTx = toRawTransaction(metaTx)
+      //     const payload = JSON.stringify({ rawTx, signature })
+      //     // Now we're somewhere else:
+      //     const resp: { rawTx: RawTransaction; signature: Signature } = JSON.parse(payload)
+      //     const result = await wallet
+      //       .executeMetaTransaction(resp.rawTx, resp.signature)
+      //       .sendAndWaitForReceipt({ from: rando })
+      //     expect(result.status).toBe(true)
 
-        expect(await gold.balanceOf(wallet.address)).toEqual(
-          walletBalanceBefore.minus(value.times(3))
-        )
-        for (let i = 0; i < 3; i++) {
-          expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
-        }
-      })
+      //     expect(await gold.balanceOf(wallet.address)).toEqual(
+      //       walletBalanceBefore.minus(value.times(3))
+      //     )
+      //     for (let i = 0; i < 3; i++) {
+      //       expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
+      //     }
+      //   })
     })
   })
 
-  // describe('#executeMetaTransactionWithRefund', () => {
-  //   describe('as a rando', () => {
-  //     it('can execute transactions', async () => {
-  //       const walletBalanceBefore = await gold.balanceOf(wallet.address)
-  //       const value = new BigNumber(1e18)
+  describe('#executeMetaTransactionWithRefund', () => {
+    describe('as a rando', () => {
+      it('can execute transactions with refund', async () => {
+        const walletBalanceBefore = await gold.balanceOf(wallet.address)
+        //const randoBalanceBefore = await gold.balanceOf(rando)
+        const value = new BigNumber(1e18)
 
-  //       const metaTransfer = gold.transfer(emptyAccounts[0], value.toFixed()).txo
-  //       const signature = await wallet.signMetaTransactionWithRefund(metaTransfer, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
+        const metaTransferWhole = gold.transfer(emptyAccounts[0], value.toFixed())
+        //console.log(metaTransferWhole)
+        const metaTransfer = metaTransferWhole.txo
+        const signature = await wallet.signMetaTransactionWithRefund(
+          metaTransfer,
+          maxGasPrice,
+          gasLimit,
+          metaGasLimit
+        )
 
-  //       const result = await wallet
-  //         .executeMetaTransactionWithRefund(metaTransfer, signature, maxGasPrice, gasLimit, metaGasLimit, gasCurrency)
-  //         .sendAndWaitForReceipt({ from: rando })
-  //       expect(result.status).toBe(true)
+        const MTx = await wallet.executeMetaTransactionWithRefund(
+          metaTransfer,
+          signature,
+          maxGasPrice,
+          gasLimit,
+          metaGasLimit
+        )
+        //console.log(MTx)
+        const result = await MTx.sendAndWaitForReceipt({ from: rando, gas: gasLimit, gasPrice: 1 })
 
-  //       expect(await gold.balanceOf(emptyAccounts[0])).toEqual(value)
-  //       expect(await gold.balanceOf(wallet.address)).toEqual(walletBalanceBefore.minus(value))
-  //     })
+        console.log(await web3.eth.getBalance(wallet.address))
+        //console.log(wallet.address)
+        //console.log(result)
+        expect(result.status).toBe(true)
 
-  //     //not sure what this means or if it applies to MTx with refund
-  //     it('can batch transactions as a call to self', async () => {
-  //       const walletBalanceBefore = await gold.balanceOf(wallet.address)
-  //       const value = new BigNumber(1e18)
-  //       const metaBatch = wallet.executeTransactions([
-  //         gold.transfer(emptyAccounts[0], value.toFixed()).txo,
-  //         gold.transfer(emptyAccounts[1], value.toFixed()).txo,
-  //         gold.transfer(emptyAccounts[2], value.toFixed()).txo,
-  //       ]).txo
+        expect(await gold.balanceOf(emptyAccounts[0])).toEqual(value)
+        const walletBalanceAfter = await gold.balanceOf(wallet.address)
+        //const randoBalanceAfter = await gold.balanceOf(rando)
+        //expect(randoBalanceBefore).toEqual(randoBalanceAfter)
+        expect(walletBalanceAfter).toEqual(walletBalanceBefore.minus(result.gasUsed).minus(value))
+      })
 
-  //       const signature = await wallet.signMetaTransaction(metaBatch, 0)
-  //       const result = await wallet
-  //         .executeMetaTransaction(metaBatch, signature)
-  //         .sendAndWaitForReceipt({ from: rando })
-  //       expect(result.status).toBe(true)
+      //not sure what this means or if it applies to MTx with refund
+      //   it('can batch transactions as a call to self', async () => {
+      //     const walletBalanceBefore = await gold.balanceOf(wallet.address)
+      //     const value = new BigNumber(1e18)
+      //     const metaBatch = wallet.executeTransactions([
+      //       gold.transfer(emptyAccounts[0], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[1], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[2], value.toFixed()).txo,
+      //     ]).txo
 
-  //       expect(await gold.balanceOf(wallet.address)).toEqual(
-  //         walletBalanceBefore.minus(value.times(3))
-  //       )
-  //       for (let i = 0; i < 3; i++) {
-  //         expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
-  //       }
-  //     })
-  //   })
+      //     const signature = await wallet.signMetaTransactionWithRefund(metaBatch, maxGasPrice, gasLimit, metaGasLimit, 0)
+      //     const result = await wallet
+      //       .executeMetaTransactionWithRefund(metaBatch, signature, maxGasPrice, gasLimit, metaGasLimit)
+      //       .sendAndWaitForReceipt({ from: rando })
+      //     expect(result.status).toBe(true)
 
-  //   describe('when passed over the wire', () => {
-  //     it('can hydrate and execute directly', async () => {
-  //       const walletBalanceBefore = await gold.balanceOf(wallet.address)
-  //       const value = new BigNumber(1e18)
-  //       const metaTx = wallet.executeTransactions([
-  //         gold.transfer(emptyAccounts[0], value.toFixed()).txo,
-  //         gold.transfer(emptyAccounts[1], value.toFixed()).txo,
-  //         gold.transfer(emptyAccounts[2], value.toFixed()).txo,
-  //       ]).txo
-  //       const signature = await wallet.signMetaTransaction(metaTx, 0)
-  //       const rawTx = toRawTransaction(metaTx)
-  //       const payload = JSON.stringify({ rawTx, signature })
-  //       // Now we're somewhere else:
-  //       const resp: { rawTx: RawTransaction; signature: Signature } = JSON.parse(payload)
-  //       const result = await wallet
-  //         .executeMetaTransaction(resp.rawTx, resp.signature)
-  //         .sendAndWaitForReceipt({ from: rando })
-  //       expect(result.status).toBe(true)
+      //     expect(await gold.balanceOf(wallet.address)).toEqual(
+      //       walletBalanceBefore.minus(value.times(3))
+      //     )
+      //     for (let i = 0; i < 3; i++) {
+      //       expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
+      //     }
+      //   })
+      // })
 
-  //       expect(await gold.balanceOf(wallet.address)).toEqual(
-  //         walletBalanceBefore.minus(value.times(3))
-  //       )
-  //       for (let i = 0; i < 3; i++) {
-  //         expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
-  //       }
-  //     })
-  //   })
-  // })
+      // describe('when passed over the wire', () => {
+      //   it('can hydrate and execute directly', async () => {
+      //     const walletBalanceBefore = await gold.balanceOf(wallet.address)
+      //     const value = new BigNumber(1e18)
+      //     const metaTx = wallet.executeTransactions([
+      //       gold.transfer(emptyAccounts[0], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[1], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[2], value.toFixed()).txo,
+      //     ]).txo
+      //     const signature = await wallet.signMetaTransactionWithRefund(metaTx, maxGasPrice, gasLimit, metaGasLimit, 0)
+      //     const rawTx = toRawTransactionWithRefund(metaTx, maxGasPrice, gasLimit, metaGasLimit)
+      //     const payload = JSON.stringify({ rawTx, signature })
+      //     // Now we're somewhere else:
+      //     const resp: { rawTx: RawTransaction; signature: Signature } = JSON.parse(payload)
+      //     const result = await wallet
+      //       .executeMetaTransactionWithRefund(resp.rawTx, resp.signature, maxGasPrice, gasLimit, metaGasLimit)
+      //       .sendAndWaitForReceipt({ from: rando })
+      //     expect(result.status).toBe(true)
+
+      //     expect(await gold.balanceOf(wallet.address)).toEqual(
+      //       walletBalanceBefore.minus(value.times(3))
+      //     )
+      //     for (let i = 0; i < 3; i++) {
+      //       expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
+      //     }
+      //   })
+    })
+  })
 
   describe('#signAndExecuteMetaTransaction', () => {
     describe('as a rando', () => {
@@ -316,7 +392,8 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
         expect(result.status).toBe(true)
 
         expect(await gold.balanceOf(emptyAccounts[0])).toEqual(value)
-        expect(await gold.balanceOf(wallet.address)).toEqual(walletBalanceBefore.minus(value))
+        const walletBalanceAfter = await gold.balanceOf(wallet.address)
+        expect(walletBalanceAfter.isLessThan(walletBalanceBefore.minus(value)))
       })
 
       it('can batch transactions as a call to self', async () => {
@@ -340,6 +417,56 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
           expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
         }
       })
+    })
+  })
+
+  describe('#signAndExecuteMetaTransactionWithRefund', () => {
+    describe('as a rando', () => {
+      it('can execute transactions', async () => {
+        const walletBalanceBefore = await gold.balanceOf(wallet.address)
+        const randoBalanceBefore = await gold.balanceOf(rando)
+        const value = new BigNumber(1e18)
+
+        const metaTransfer = gold.transfer(emptyAccounts[0], value.toFixed()).txo
+        const tx = await wallet.signAndExecuteMetaTransactionWithRefund(
+          metaTransfer,
+          maxGasPrice,
+          gasLimit,
+          metaGasLimit
+        )
+        const result = await tx.sendAndWaitForReceipt({ from: rando, gasPrice: 1, gas: gasLimit })
+        expect(result.status).toBe(true)
+
+        expect(await gold.balanceOf(emptyAccounts[0])).toEqual(value)
+
+        const walletBalanceAfter = await gold.balanceOf(wallet.address)
+        const randoBalanceAfter = await gold.balanceOf(rando)
+
+        expect(randoBalanceAfter.isEqualTo(randoBalanceBefore))
+        expect(walletBalanceAfter.isEqualTo(walletBalanceBefore.minus(value).minus(result.gasUsed)))
+      })
+
+      // it('can batch transactions as a call to self', async () => {
+      //   const walletBalanceBefore = await gold.balanceOf(wallet.address)
+      //   const value = new BigNumber(1e18)
+
+      //   const tx = await wallet.signAndExecuteMetaTransaction(
+      //     wallet.executeTransactions([
+      //       gold.transfer(emptyAccounts[0], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[1], value.toFixed()).txo,
+      //       gold.transfer(emptyAccounts[2], value.toFixed()).txo,
+      //     ]).txo
+      //   )
+      //   const result = await tx.sendAndWaitForReceipt({ from: rando })
+      //   expect(result.status).toBe(true)
+
+      //   expect(await gold.balanceOf(wallet.address)).toEqual(
+      //     walletBalanceBefore.minus(value.times(3))
+      //   )
+      //   for (let i = 0; i < 3; i++) {
+      //     expect(await gold.balanceOf(emptyAccounts[i])).toEqual(value)
+      //   }
+      // })
     })
   })
 })
