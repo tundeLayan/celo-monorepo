@@ -72,7 +72,7 @@ contract MetaTransactionWallet is
     bool success
   );
 
-  event RefundBalanceCheckFailed(address destination, uint256 value, uint256 walletBalance);
+  event StackProtectionCheckFailed(address destination, uint256 value, uint256 walletBalance);
 
   // onlyGuardian functions can only be called when the guardian is not the zero address and
   // the caller is the guardian.
@@ -365,6 +365,25 @@ contract MetaTransactionWallet is
   }
 
   /**
+   * @notice Calculates the gas refund for executeMetaTransactionWithRefund
+   * @param startGas The ammount of gas available for the call to executeMetaTransactionWithRefund.
+   * @param gasLeft The ammount of gas left at the time of the refund.
+   * @param gasPrice The per unit price of gas for the transaction.
+   * @return The total that should be refunded for gas usage.
+   */
+  function getGasRefund(uint256 startGas, uint256 gasLeft, uint256 gasPrice)
+    internal
+    returns (uint256)
+  {
+    uint256 CONFIG_GAS_AFTER_REFUND = 32441;
+    // gasUsedSoFar = startGas.sub(gasLeft);
+    // totalGasUsed = gasUsedSoFar.add(CONFIG_GAS_AFTER_REFUND);
+    // gasRefund = totalGasUsed.mul(gasPrice);
+
+    return startGas.sub(gasLeft).add(CONFIG_GAS_AFTER_REFUND).mul(gasPrice);
+  }
+
+  /**
    * @notice Executes a refundable meta-transaction on behalf of the signer.
    * @param destination The address to which the meta-transaction is to be sent.
    * @param value The CELO value to be sent with the meta-transaction.
@@ -388,12 +407,12 @@ contract MetaTransactionWallet is
     bytes32 r,
     bytes32 s
   ) external returns (bytes memory) {
-    require(gasLimit >= gasleft(), "gasLimit different than limit authorized by signer"); // To ensure Komenci actually set the correct gas limit TODO ask Contracts about this
-    require(tx.gasprice <= maxGasPrice, "gasprice exceeds limit authorized by signer");
+    uint256 startGas = gasleft();
+    require(gasLimit >= startGas, "gasLimit different than limit authorized by signer"); // To ensure Komenci actually set the correct gas limit TODO ask Contracts about this
+    require(maxGasPrice >= tx.gasprice, "gasprice exceeds limit authorized by signer");
     require(address(this).balance >= gasLimit.mul(tx.gasprice).add(value), "insufficient balance");
     require(msg.sender == tx.origin, "relayer must be EOA");
-    if (data.length > 0) require(Address.isContract(destination), "Invalid contract address");
-    require(metaGasLimit < gasLimit, "metaGasLimit must be less than gasLimit");
+    require(gasLimit > metaGasLimit, "metaGasLimit must be less than gasLimit");
 
     // checking gasCurrency is out of scope, would require pre-compile
     {
@@ -415,21 +434,14 @@ contract MetaTransactionWallet is
     nonce = nonce.add(1);
 
     bytes memory returnData;
-
     {
-      // TODO: ask Contracts about a more accurate estimate
-      uint256 gasAfterMTxExecution = 7900; // estimated by emitting gasleft() at desired benchmark times
-
-      if (
-        address(this).balance >=
-        metaGasLimit.add(gasAfterMTxExecution).mul(tx.gasprice).add(value) &&
-        metaGasLimit < (gasleft() * 63) / 64
-      ) {
+      if (metaGasLimit < (gasleft() * 63) / 64) {
         bool success;
         {
           // if value is non-zero, destination.call seems to add 2300 gas to metaGasLimit.
           // We want this to execute with exactly the metaGasLimit specified by the signer
           // so we subtract 2300 from metaGasLimit if value is non-zero
+
           if (value > 0) metaGasLimit = metaGasLimit.sub(2300);
           (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data);
         }
@@ -445,15 +457,12 @@ contract MetaTransactionWallet is
           success
         );
       } else {
-        emit RefundBalanceCheckFailed(destination, value, address(this).balance);
+        emit StackProtectionCheckFailed(destination, value, address(this).balance);
         returnData = "";
       }
     }
 
-    {
-      uint256 gasAfterRefund = 4747; // TODO: determine this constant (gas required for operations after and including msg.sender.transfer)
-      msg.sender.transfer(gasLimit.sub(gasleft()).add(gasAfterRefund).mul(tx.gasprice));
-    }
+    msg.sender.transfer(getGasRefund(startGas, gasleft(), tx.gasprice));
 
     return returnData;
   }
