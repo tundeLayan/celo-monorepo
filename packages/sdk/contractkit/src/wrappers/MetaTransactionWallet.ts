@@ -99,9 +99,9 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
    * Reverts if meta-tx signer is not a signer for the wallet
    * @param tx a TransactionInput
    * @param signature a Signature
-   * @param maxGasPrice maximum gas price the user is willing to pay
-   * @param gasLimit maximum amount of gas user is willing for entire transaction to use
-   * @param metaGasLimit maximum amount of gas user is willing for meta-transaction to use
+   * @param maxGasPrice maximum gas price signer is willing to pay
+   * @param gasLimit maximum amount of gas signer is willing for entire transaction to use
+   * @param metaGasLimit maximum amount of gas signer is willing for meta-transaction to use
    */
   public executeMetaTransactionWithRefund(
     tx: TransactionInput<any>,
@@ -132,7 +132,7 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
    * Signs a meta transaction as EIP712 typed data
    * @param tx a TransactionWrapper
    * @param nonce Optional -- will query contract state if not passed
-   * @returns signature a Signature
+   * @returns a Signature
    */
   public async signMetaTransaction(tx: TransactionInput<any>, nonce?: number): Promise<Signature> {
     if (nonce === undefined) {
@@ -151,8 +151,11 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   /**
    * Signs a meta transaction with refund as EIP712 typed data
    * @param tx a TransactionWrapper
+   * @param maxGasPrice maximum gas price signer is willing to pay
+   * @param gasLimit maximum amount of gas signer is willing for entire transaction to use
+   * @param metaGasLimit maximum amount of gas signer is willing for meta-transaction to use
    * @param nonce Optional -- will query contract state if not passed
-   * @returns signature a Signature
+   * @returns a Signature
    */
   public async signMetaTransactionWithRefund(
     tx: TransactionInput<any>,
@@ -187,9 +190,12 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   }
 
   /**
-   * Sign and execute a refundable meta transaction refunding gas to the submitter
+   * Sign and execute a meta transaction refunding gas to the submitter
    * Reverts if meta-tx signer is not a signer for the wallet
    * @param tx a TransactionInput
+   * @param maxGasPrice maximum gas price signer is willing to pay
+   * @param gasLimit maximum amount of gas signer is willing for entire transaction to use
+   * @param metaGasLimit maximum amount of gas signer is willing for meta-transaction to use
    */
   public async signAndExecuteMetaTransactionWithRefund(
     tx: TransactionInput<any>,
@@ -350,7 +356,7 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
  * for one instance of ContractKit to serialize a meta transaction to
  * send over the wire and be consumed somewhere else.
  * @param tx TransactionInput<any> union of all the ways we expect transactions
- * @returns a RawTransactions that's serializable
+ * @returns a RawTransaction that's serializable
  */
 export const toRawTransaction = (tx: TransactionInput<any>): RawTransaction => {
   if ('destination' in tx) {
@@ -377,7 +383,10 @@ export const toRawTransaction = (tx: TransactionInput<any>): RawTransaction => {
  * for one instance of ContractKit to serialize a meta transaction to
  * send over the wire and be consumed somewhere else.
  * @param tx TransactionInput<any> union of all the ways we expect transactions
- * @returns a RawTransactions that's serializable
+ * @param maxGasPrice maximum gas price signer is willing to pay
+ * @param gasLimit maximum amount of gas signer is willing for entire transaction to use
+ * @param metaGasLimit maximum amount of gas signer is willing for meta-transaction to use
+ * @returns a RawTransactionWithRefund that's serializable
  */
 export const toRawTransactionWithRefund = (
   tx: TransactionInput<any>,
