@@ -632,20 +632,18 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
     })
   })
 
-  describe.only('#executeMetaTransactionWithRefund()', () => {
-    const value = 5
+  describe('#executeMetaTransactionWithRefund()', () => {
+    const value = 100000
     const destination = web3.utils.toChecksumAddress(web3.utils.randomHex(20))
     const data = '0x'
     const maxGasPrice = 20
-    const gasLimit = 100000000
+    const gasLimit = 10000000
     const metaGasLimit = 10000
     let submitter
     let nonce
     let transferSigner
 
     const doTransferWithRefund = async () => {
-      //This function is defined in '@celo/protocol/lib/meta-tx-utils', need to be able to pass in refund params
-
       const { v, r, s } = await getSignatureForMetaTransactionWithRefund(
         transferSigner,
         wallet.address,
@@ -657,22 +655,6 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
           maxGasPrice,
           gasLimit,
           metaGasLimit,
-        }
-      )
-
-      let gasEstimate = await wallet.executeMetaTransactionWithRefund.estimateGas(
-        destination,
-        value,
-        data,
-        maxGasPrice,
-        gasLimit,
-        metaGasLimit,
-        v,
-        r,
-        s,
-        {
-          from: submitter,
-          gasPrice: 1,
         }
       )
 
@@ -689,7 +671,7 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
         {
           from: submitter,
           gasPrice: 1,
-          gas: gasEstimate,
+          gas: gasLimit,
         }
       )
     }
@@ -713,6 +695,11 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
         describe('when signed by the signer', () => {
           beforeEach(async () => {
             transferSigner = signer
+            await web3.eth.sendTransaction({
+              from: accounts[0],
+              to: wallet.address,
+              value: 200000000000000,
+            })
           })
 
           describe('re-entrancy attempt', () => {
@@ -772,6 +759,8 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
                 s,
                 {
                   from: submitter,
+                  gas: gasLimit,
+                  gasPrice: 1,
                 }
               )
 
@@ -795,17 +784,6 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
           })
 
           describe('when not a re-entrancy attempt', () => {
-            beforeEach(async () => {
-              // submitterBalance = await web3.eth.getBalance(submitter)
-              await web3.eth.sendTransaction({
-                from: accounts[0],
-                to: wallet.address,
-                value: 200000000000000,
-              })
-
-              // res = await doTransferWithRefund()
-            })
-
             it('should execute meta-transactions', async () => {
               await doTransferWithRefund()
               assert.equal(await web3.eth.getBalance(destination), value)
@@ -839,7 +817,8 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
               res = await doTransferWithRefund()
               let submitterBalanceAfter = await web3.eth.getBalance(submitter)
 
-              assert.equal(submitterBalanceAfter, submitterBalanceBefore)
+              assert.equal(submitterBalanceAfter >= submitterBalanceBefore * 0.99999, true)
+              assert.equal(submitterBalanceAfter <= submitterBalanceBefore * 1.00001, true)
             })
           })
         })

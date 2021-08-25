@@ -40,10 +40,6 @@ contract MetaTransactionWallet is
   event WalletRecovered(address indexed newSigner);
   event EIP712DomainSeparatorSet(bytes32 eip712DomainSeparator);
   event Deposit(address indexed sender, uint256 value);
-  event DebugNumber(uint256 number, string message);
-  event DebugAddress(address indexed dAddress, string message);
-  event DebugBytes32(bytes32 value);
-  event DebugString(string message);
 
   event TransactionExecution(
     address indexed destination,
@@ -72,7 +68,7 @@ contract MetaTransactionWallet is
     bool success
   );
 
-  event StackProtectionCheckFailed(address destination, uint256 value, uint256 walletBalance);
+  event StackProtectionCheckFailed(uint256 metaGasLimit, uint256 gasLeft);
 
   // onlyGuardian functions can only be called when the guardian is not the zero address and
   // the caller is the guardian.
@@ -375,22 +371,23 @@ contract MetaTransactionWallet is
     internal
     returns (uint256)
   {
+    // The ammount of gas estimated to execute refund transfer
     uint256 CONFIG_GAS_AFTER_REFUND = 32441;
-    // gasUsedSoFar = startGas.sub(gasLeft);
-    // totalGasUsed = gasUsedSoFar.add(CONFIG_GAS_AFTER_REFUND);
-    // gasRefund = totalGasUsed.mul(gasPrice);
-
+    // startGas - gasLeft --> gasUsedSoFar
+    // gasUsedSoFar + CONFIG_GAS_AFTER_REFUND --> totalGasUsed
+    // totalGasUsed * gasPrice --> totalRefundAmmount
     return startGas.sub(gasLeft).add(CONFIG_GAS_AFTER_REFUND).mul(gasPrice);
   }
 
   /**
-   * @notice Executes a refundable meta-transaction on behalf of the signer.
+   * @notice Executes a meta-transaction with refund on behalf of the signer.
    * @param destination The address to which the meta-transaction is to be sent.
    * @param value The CELO value to be sent with the meta-transaction.
    * @param data The data to be sent with the meta-transaction.
    * @param maxGasPrice The maximum gas price the user is willing to pay.
    * @param gasLimit The gas limit for entire relayed transaction.
    * @param metaGasLimit The gas limit for just the meta-transaction.
+   *                     This is to assure the submitter they aren't paying for a runaway meta transaction.
    * @param v The recovery id of the ECDSA signature of the meta-transaction.
    * @param r Output value r of the ECDSA signature.
    * @param s Output value s of the ECDSA signature.
@@ -408,13 +405,11 @@ contract MetaTransactionWallet is
     bytes32 s
   ) external returns (bytes memory) {
     uint256 startGas = gasleft();
-    require(gasLimit >= startGas, "gasLimit different than limit authorized by signer"); // To ensure Komenci actually set the correct gas limit TODO ask Contracts about this
+    require(gasLimit >= startGas, "gas exceeds limit authorized by signer");
     require(maxGasPrice >= tx.gasprice, "gasprice exceeds limit authorized by signer");
     require(address(this).balance >= gasLimit.mul(tx.gasprice).add(value), "insufficient balance");
-    require(msg.sender == tx.origin, "relayer must be EOA");
     require(gasLimit > metaGasLimit, "metaGasLimit must be less than gasLimit");
 
-    // checking gasCurrency is out of scope, would require pre-compile
     {
       address _signer = getMetaTransactionWithRefundSigner(
         destination,
@@ -428,9 +423,8 @@ contract MetaTransactionWallet is
         r,
         s
       );
-      require(_signer == signer, "Invalid meta-transaction signer");
+      require(_signer == signer, "Invalid signature");
     }
-
     nonce = nonce.add(1);
 
     bytes memory returnData;
@@ -441,7 +435,6 @@ contract MetaTransactionWallet is
           // if value is non-zero, destination.call seems to add 2300 gas to metaGasLimit.
           // We want this to execute with exactly the metaGasLimit specified by the signer
           // so we subtract 2300 from metaGasLimit if value is non-zero
-
           if (value > 0) metaGasLimit = metaGasLimit.sub(2300);
           (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data);
         }
@@ -457,7 +450,7 @@ contract MetaTransactionWallet is
           success
         );
       } else {
-        emit StackProtectionCheckFailed(destination, value, address(this).balance);
+        emit StackProtectionCheckFailed(metaGasLimit, gasleft());
         returnData = "";
       }
     }
@@ -487,7 +480,7 @@ contract MetaTransactionWallet is
   }
 
   /**
-   * @notice Executes multiple transactions on behalf of the signer.`
+   * @notice Executes multiple transactions on behalf of the signer.
    * @param destinations The address to which each transaction is to be sent.
    * @param values The CELO value to be sent with each transaction.
    * @param data The concatenated data to be sent in each transaction.
