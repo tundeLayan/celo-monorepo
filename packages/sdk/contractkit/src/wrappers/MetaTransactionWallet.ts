@@ -30,7 +30,6 @@ export interface RawTransactionWithRefund extends RawTransaction {
   metaGasLimit: number
 }
 
-//These are the types we care about
 export type TransactionInput<T> =
   | CeloTxObject<T>
   | TransactionObjectWithValue<T>
@@ -96,7 +95,7 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   }
 
   /**
-   * Execute a signed refundable meta transaction
+   * Execute a signed meta transaction refunding gas to the submitter
    * Reverts if meta-tx signer is not a signer for the wallet
    * @param tx a TransactionInput
    * @param signature a Signature
@@ -150,7 +149,7 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   }
 
   /**
-   * Signs a refundable meta transaction as EIP712 typed data
+   * Signs a meta transaction with refund as EIP712 typed data
    * @param tx a TransactionWrapper
    * @param nonce Optional -- will query contract state if not passed
    * @returns signature a Signature
@@ -188,7 +187,7 @@ export class MetaTransactionWalletWrapper extends BaseWrapper<MetaTransactionWal
   }
 
   /**
-   * Sign and execute a refundable meta transaction
+   * Sign and execute a refundable meta transaction refunding gas to the submitter
    * Reverts if meta-tx signer is not a signer for the wallet
    * @param tx a TransactionInput
    */
@@ -372,7 +371,7 @@ export const toRawTransaction = (tx: TransactionInput<any>): RawTransaction => {
 }
 
 /**
- * Turns any possible way to pass in a transaction into the raw values
+ * Turns any possible way to pass in a transaction into the raw values with gas refund params
  * that are actually required for a transaction with a refund. This is used both internally to normalize
  * ways in which transactions are passed in but also public in order
  * for one instance of ContractKit to serialize a meta transaction to
