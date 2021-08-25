@@ -1,0 +1,24 @@
+{
+  "name": "@celo/odis-circuit-breaker",
+  "version": "0.0.1-dev",
+  "description": "",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "tsc",
+    "build:production": "yarn prestart",
+    "build:watch": "tsc --w",
+    "prestart": "yarn build && func extensions install",
+    "publish:prototype": "func azure functionapp publish odis-circuit-breaker-prototype",
+    "start:host": "func start",
+    "start": "yarn start:host",
+    "test": "echo \"No tests yet...\""
+  },
+  "devDependencies": {
+    "@azure/functions": "^1.2.3",
+    "typescript": "^4.3.5"
+  },
+  "dependencies": {
+    "@azure/identity": "^1.5.1",
+    "@azure/keyvault-keys": "^4.3.0"
+  }
+}
