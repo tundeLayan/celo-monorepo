@@ -8,7 +8,7 @@
     "build:production": "yarn prestart",
     "build:watch": "tsc --w",
     "prestart": "yarn build && func extensions install",
-    "publish:prototype": "func azure functionapp publish odis-circuit-breaker-prototype",
+    "deploy:prototype": "func azure functionapp publish odis-circuit-breaker-prototype",
     "start:host": "func start",
     "start": "yarn start:host",
     "test": "echo \"No tests yet...\""
