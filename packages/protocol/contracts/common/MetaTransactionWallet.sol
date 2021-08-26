@@ -68,8 +68,6 @@ contract MetaTransactionWallet is
     bool success
   );
 
-  event StackProtectionCheckFailed(uint256 metaGasLimit, uint256 gasLeft);
-
   // onlyGuardian functions can only be called when the guardian is not the zero address and
   // the caller is the guardian.
   modifier onlyGuardian() {
@@ -436,35 +434,26 @@ contract MetaTransactionWallet is
       );
       require(_signer == signer, "Invalid signature");
     }
+
     nonce = nonce.add(1);
 
-    bytes memory returnData;
-    {
-      if (metaGasLimit < (gasleft() * 63) / 64) {
-        bool success;
-        {
-          // if value is non-zero, destination.call seems to add 2300 gas to metaGasLimit.
-          // We want this to execute with exactly the metaGasLimit specified by the signer
-          // so we subtract 2300 from metaGasLimit if value is non-zero
-          if (value > 0) metaGasLimit = metaGasLimit.sub(2300);
-          (success, returnData) = destination.call.value(value).gas(metaGasLimit)(data);
-        }
-        emit MetaTransactionWithRefundExecution(
-          destination,
-          value,
-          data,
-          nonce.sub(1),
-          maxGasPrice,
-          gasLimit,
-          metaGasLimit,
-          returnData,
-          success
-        );
-      } else {
-        emit StackProtectionCheckFailed(metaGasLimit, gasleft());
-        returnData = "";
-      }
-    }
+    // if value is non-zero, destination.call seems to add 2300 gas to metaGasLimit.
+    // We want this to execute with exactly the metaGasLimit specified by the signer
+    // so we subtract 2300 from metaGasLimit if value is non-zero
+    if (value > 0) metaGasLimit = metaGasLimit.sub(2300);
+    (bool success, bytes memory returnData) = destination.call.value(value).gas(metaGasLimit)(data);
+
+    emit MetaTransactionWithRefundExecution(
+      destination,
+      value,
+      data,
+      nonce.sub(1),
+      maxGasPrice,
+      gasLimit,
+      metaGasLimit,
+      returnData,
+      success
+    );
 
     msg.sender.transfer(getGasRefund(startGasLeft, gasleft(), tx.gasprice));
 
