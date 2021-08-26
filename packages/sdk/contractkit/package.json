@@ -1,13 +1,16 @@
 {
-  "name": "@celo/contractkit",
+  "name": "@dave-carroll7/komenci-refund-contractkit",
   "version": "1.2.3-dev",
   "description": "Celo's ContractKit to interact with Celo network",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "author": "Celo",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/celo-org/celo-monorepo/tree/master/packages/sdk/contractkit",
-  "repository": "https://github.com/celo-org/celo-monorepo/tree/master/packages/sdk/contractkit",
+  "homepage": "https://github.com/celo-org/celo-monorepo/tree/dave-carroll7/komenciRefund/packages/sdk/contractkit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/celo-org/celo-monorepo/tree/dave-carroll7/komenciRefund/packages/sdk/contractkit"
+  },
   "keywords": [
     "celo",
     "blockchain",
@@ -60,5 +63,8 @@
   },
   "browser": {
     "child_process": false
+  },
+  "directories": {
+    "lib": "lib"
   }
 }

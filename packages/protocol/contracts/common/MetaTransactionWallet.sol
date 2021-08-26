@@ -371,8 +371,10 @@ contract MetaTransactionWallet is
     internal
     returns (uint256)
   {
-    // The ammount of gas estimated to execute refund transfer
+    // The ammount of gas estimated to execute refund transfer.
+    // Estimated by emitting gasleft() at desired benchmarks
     uint256 CONFIG_GAS_AFTER_REFUND = 32441;
+
     // startGas - gasLeft --> gasUsedSoFar
     // gasUsedSoFar + CONFIG_GAS_AFTER_REFUND --> totalGasUsed
     // totalGasUsed * gasPrice --> totalRefundAmmount
@@ -404,11 +406,18 @@ contract MetaTransactionWallet is
     bytes32 r,
     bytes32 s
   ) external returns (bytes memory) {
-    uint256 startGas = gasleft();
-    require(gasLimit >= startGas, "gas exceeds limit authorized by signer");
-    require(maxGasPrice >= tx.gasprice, "gasprice exceeds limit authorized by signer");
+    uint256 startGasLeft = gasleft();
+    require(gasLimit >= startGasLeft, "gas exceeds limit authorized by signer");
+    require(maxGasPrice >= tx.gasprice, "gas price exceeds limit authorized by signer");
     require(address(this).balance >= gasLimit.mul(tx.gasprice).add(value), "insufficient balance");
-    require(gasLimit > metaGasLimit, "metaGasLimit must be less than gasLimit");
+    {
+      // the gas estimated for checks and refund
+      uint256 CONFIG_RESERVE_GAS = 50000;
+      require(
+        startGasLeft > metaGasLimit.add(CONFIG_RESERVE_GAS),
+        "not enough gas to refund submitter"
+      );
+    }
 
     {
       address _signer = getMetaTransactionWithRefundSigner(
@@ -455,7 +464,7 @@ contract MetaTransactionWallet is
       }
     }
 
-    msg.sender.transfer(getGasRefund(startGas, gasleft(), tx.gasprice));
+    msg.sender.transfer(getGasRefund(startGasLeft, gasleft(), tx.gasprice));
 
     return returnData;
   }
