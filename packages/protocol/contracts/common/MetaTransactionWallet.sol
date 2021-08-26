@@ -197,6 +197,7 @@ contract MetaTransactionWallet is
    * @param data The data to be sent with the meta-transaction.
    * @param _nonce The nonce for this meta-transaction local to this wallet.
    * @param maxGasPrice The maximum gas price the user is willing to pay.
+   * @param gasLimit The gas limit for the the entire transaction.
    * @param metaGasLimit The gas limit for just the meta-transaction.
    * @return The digest of the provided meta-transaction.
    */
@@ -304,6 +305,7 @@ contract MetaTransactionWallet is
    * @param data The data to be sent with the meta-transaction.
    * @param _nonce The nonce for this meta-transaction local to this wallet.
    * @param maxGasPrice The maximum gas price the user is willing to pay.
+   * @param gasLimit The gas limit for the the entire transaction.
    * @param metaGasLimit The gas limit for just the meta-transaction.
    * @param v The recovery id of the ECDSA signature of the meta-transaction.
    * @param r Output value r of the ECDSA signature.
