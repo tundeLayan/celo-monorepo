@@ -415,7 +415,7 @@ contract MetaTransactionWallet is
       uint256 CONFIG_RESERVE_GAS = 50000;
       require(
         startGasLeft > metaGasLimit.add(CONFIG_RESERVE_GAS),
-        "not enough gas to refund submitter"
+        "insufficient gas to reach submitter refund"
       );
     }
 
