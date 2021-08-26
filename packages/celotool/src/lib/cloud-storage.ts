@@ -1,4 +1,4 @@
-const { Storage } = require('@google-cloud/storage')
+import { Storage } from '@google-cloud/storage'
 
 const sleep = async (time: number) => {
   return new Promise((resolve) => setTimeout(resolve, time))

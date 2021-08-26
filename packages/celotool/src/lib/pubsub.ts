@@ -1,4 +1,6 @@
 import PubSub from '@google-cloud/pubsub'
+import { execCmdWithExitOnFailure } from './cmd-utils'
+import { outputIncludes, switchToGCPProject, switchToProjectFromEnv } from './utils'
 
 export const createClient = (credentials?: any) => {
   // @ts-ignore-next-line
@@ -7,6 +9,48 @@ export const createClient = (credentials?: any) => {
 
 export const buildSubscriptionName = (envName: string, purpose: string) => {
   return `${envName}-${purpose}`
+}
+
+export const createTopicIfNotExists = async (topic: string, projectID?: string) => {
+  if (projectID !== undefined) {
+    await switchToGCPProject(projectID)
+  } else {
+    await switchToProjectFromEnv()
+  }
+
+  const topicExists = await outputIncludes(
+    `gcloud pubsub topics list`,
+    topic,
+    `GCP PubSub topic ${topic} exists, skipping creation`
+  )
+
+  if (!topicExists) {
+    await execCmdWithExitOnFailure(`gcloud pubsub topics create ${topic}`)
+  }
+
+  return !topicExists
+}
+
+export const deleteTopic = async (topic: string, projectID?: string) => {
+  if (projectID !== undefined) {
+    await switchToGCPProject(projectID)
+  } else {
+    await switchToProjectFromEnv()
+  }
+
+  await execCmdWithExitOnFailure(`gcloud pubsub topics delete ${topic}`)
+}
+
+export const allowServiceAccountToPublishToTopic = async (
+  topic: string,
+  serviceAccountEmail: string
+) => {
+  await execCmdWithExitOnFailure(
+    `gcloud pubsub topics add-iam-policy-binding \
+      --member=serviceAccount:${serviceAccountEmail} \
+      --role=roles/pubsub.publisher \
+      ${topic}`
+  )
 }
 
 export const createSubscription = async (

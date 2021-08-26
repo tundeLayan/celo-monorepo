@@ -11,6 +11,16 @@ spec:
     component: eksportisto
     release: {{ .Release.Name }}
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "eksportisto.name" . }}-service-account
+  labels:
+    component: eksportisto
+    release: {{ .Release.Name }}
+data:
+  serviceAccount.json: {{ .Values.serviceAccountBase64 | b64dec | quote }}
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -67,9 +77,14 @@ spec:
           - "-nodeUri={{ .Values.web3Provider }}"
           - "-datadir=/root/.eksportisto"
           - "-sensitiveAccounts=/root/.eksportisto/sensitive-accounts.json"
+          - "-output=pubsub"
+          - "-pubsub-topic-id={{ .Values.topicId }}"
+          - "-pubsub-project-id={{ .Values.projectId }}"
         env:
         - name: GOGC
           value: "11300"
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/root/serviceAccount.json"
         resources:
           requests:
             memory: 2Gi
@@ -82,9 +97,24 @@ spec:
           mountPath: /root/.eksportisto
         - name: config
           mountPath: /var/config
+        - name: service-account
+          mountPath: /root/serviceAccount.json
+          subPath: serviceAccount.json
+      - name: eksportisto-{{ .Values.deploymentSuffix }}-alpine
+        image: alpine:latest
+        command: ['sleep', 'infinity']
+        volumeMounts:
+        - name: data
+          mountPath: /root/.eksportisto
+        - name: service-account
+          mountPath: /root/serviceAccount.json
+          subPath: serviceAccount.json
       volumes:
       - name: data
         emptyDir: {}
       - name: config
         configMap:
           name: eksportisto-{{ .Values.deploymentSuffix }}-config
+      - name: service-account
+        configMap:
+          name: {{ template "eksportisto.name" . }}-service-account

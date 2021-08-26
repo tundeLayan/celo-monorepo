@@ -1,1 +1,4 @@
 imagePullPolicy: IfNotPresent
+serviceAccountBase64: base64EncodedServiceAccount
+projectId: celo-testnet-production
+topicId: eksportisto-topic
