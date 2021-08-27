@@ -817,8 +817,8 @@ contract('MetaTransactionWallet', (accounts: string[]) => {
               res = await doTransferWithRefund()
               let submitterBalanceAfter = await web3.eth.getBalance(submitter)
 
-              assert.equal(submitterBalanceAfter >= submitterBalanceBefore * 0.99999, true)
-              assert.equal(submitterBalanceAfter <= submitterBalanceBefore * 1.00001, true)
+              assert.equal(submitterBalanceAfter >= submitterBalanceBefore * 0.999999999999, true)
+              assert.equal(submitterBalanceAfter <= submitterBalanceBefore * 1.000000000001, true)
             })
           })
         })

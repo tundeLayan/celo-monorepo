@@ -328,10 +328,10 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
 
         //refunds relayer
         expect(
-          randoBalanceAfter.isGreaterThanOrEqualTo(randoBalanceBefore.multipliedBy(0.99999))
+          randoBalanceAfter.isGreaterThanOrEqualTo(randoBalanceBefore.multipliedBy(0.999999999999))
         ).toBe(true)
         expect(
-          randoBalanceAfter.isLessThanOrEqualTo(randoBalanceBefore.multipliedBy(1.00001))
+          randoBalanceAfter.isLessThanOrEqualTo(randoBalanceBefore.multipliedBy(1.000000000001))
         ).toBe(true)
       })
     })
@@ -407,10 +407,10 @@ testWithGanache('MetaTransactionWallet Wrapper', (web3) => {
 
         //refunds relayer
         expect(
-          randoBalanceAfter.isGreaterThanOrEqualTo(randoBalanceBefore.multipliedBy(0.99999))
+          randoBalanceAfter.isGreaterThanOrEqualTo(randoBalanceBefore.multipliedBy(0.999999999999))
         ).toBe(true)
         expect(
-          randoBalanceAfter.isLessThanOrEqualTo(randoBalanceBefore.multipliedBy(1.00001))
+          randoBalanceAfter.isLessThanOrEqualTo(randoBalanceBefore.multipliedBy(1.000000000001))
         ).toBe(true)
       })
     })
