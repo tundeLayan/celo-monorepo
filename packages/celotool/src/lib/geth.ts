@@ -1012,15 +1012,12 @@ export async function startGeth(
     datadir,
     '--syncmode',
     syncmode,
-    '--debug',
     '--metrics',
     '--port',
     port.toString(),
     '--networkid',
     gethConfig.networkId.toString(),
     `--verbosity=${verbosity}`,
-    '--consoleoutput=stdout', // Send all logs to stdout
-    '--consoleformat=term',
     '--nat',
     'extip:127.0.0.1',
     '--allow-insecure-unlock', // geth1.9 to use http w/unlocking
