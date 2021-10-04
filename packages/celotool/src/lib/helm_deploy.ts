@@ -90,8 +90,9 @@ export async function createCloudSQLInstance(celoEnv: string, instanceName: stri
     )
   } catch (error) {
     if (
+      error instanceof Error &&
       error.message.trim() !==
-      `Command failed: gcloud sql instances describe ${instanceName}\nERROR: (gcloud.sql.instances.describe) HTTPError 404: The Cloud SQL instance does not exist.`
+        `Command failed: gcloud sql instances describe ${instanceName}\nERROR: (gcloud.sql.instances.describe) HTTPError 404: The Cloud SQL instance does not exist.`
     ) {
       console.error(error.message.trim())
       process.exit(1)
@@ -99,7 +100,6 @@ export async function createCloudSQLInstance(celoEnv: string, instanceName: stri
   }
 
   // Quite often these commands timeout, but actually succeed anyway. By ignoring errors we allow them to be re-run.
-
   try {
     await execCmd(
       `gcloud sql instances create ${instanceName} --zone ${fetchEnv(
@@ -107,7 +107,9 @@ export async function createCloudSQLInstance(celoEnv: string, instanceName: stri
       )} --database-version POSTGRES_9_6 --cpu 1 --memory 4G`
     )
   } catch (error) {
-    console.error(error.message.trim())
+    if (error instanceof Error) {
+      console.error(error.message.trim())
+    }
   }
 
   const envType = fetchEnv(envVar.ENV_TYPE)
@@ -119,7 +121,9 @@ export async function createCloudSQLInstance(celoEnv: string, instanceName: stri
         )}`
       )
     } catch (error) {
-      console.error(error.message.trim())
+      if (error instanceof Error) {
+        console.error(error.message.trim())
+      }
     }
   }
 
@@ -431,39 +435,57 @@ export async function resetCloudSQLInstance(instanceName: string) {
 
 export async function registerIPAddress(name: string, zone?: string) {
   console.info(`Registering IP address ${name}`)
-  try {
-    await execCmd(
-      `gcloud compute addresses create ${name} --region ${getKubernetesClusterRegion(zone)}`
-    )
-  } catch (error) {
-    if (!error.toString().includes('already exists')) {
-      console.error(error)
-      process.exit(1)
+  if (!isCelotoolHelmDryRun()) {
+    try {
+      await execCmd(
+        `gcloud compute addresses create ${name} --region ${getKubernetesClusterRegion(zone)}`
+      )
+    } catch (error) {
+      if (error instanceof Error && !error.toString().includes('already exists')) {
+        console.error(error)
+        process.exit(1)
+      }
     }
+  } else {
+    console.debug(`Skip registerIPAddress(${name}, ${zone}) because --helmdryrun`)
   }
 }
 
 export async function deleteIPAddress(name: string, zone?: string) {
   console.info(`Deleting IP address ${name}`)
-  try {
-    await execCmd(
-      `gcloud compute addresses delete ${name} --region ${getKubernetesClusterRegion(zone)} -q`
-    )
-  } catch (error) {
-    if (!error.toString().includes('was not found')) {
-      console.error(error)
-      process.exit(1)
+  if (!isCelotoolHelmDryRun()) {
+    try {
+      await execCmd(
+        `gcloud compute addresses delete ${name} --region ${getKubernetesClusterRegion(zone)} -q`
+      )
+    } catch (error) {
+      if (error instanceof Error && !error.toString().includes('was not found')) {
+        console.error(error)
+        process.exit(1)
+      }
     }
+  } else {
+    console.debug(`Skip deleteIPAddress(${name}, ${zone}) because --helmdryrun`)
   }
 }
 
-export async function retrieveIPAddress(name: string, zone?: string) {
-  const [address] = await execCmdWithExitOnFailure(
-    `gcloud compute addresses describe ${name} --region ${getKubernetesClusterRegion(
-      zone
-    )} --format="value(address)"`
-  )
-  return address.replace(/\n*$/, '')
+export async function retrieveIPAddress(name: string, zone?: string): Promise<string> {
+  try {
+    const [address] = await execCmdWithExitOnFailure(
+      `gcloud compute addresses describe ${name} --region ${getKubernetesClusterRegion(
+        zone
+      )} --format="value(address)"`
+    )
+    return address.replace(/\n*$/, '')
+  } catch (error) {
+    // Ip may not exists bc it has not been created yet
+    if (isCelotoolHelmDryRun()) {
+      // Return a dummy ip
+      return `1.2.3.4`
+    }
+    console.error(`Could not retrieve IP Address ${name} in ${zone}. Exiting`)
+    process.exit(1)
+  }
 }
 
 export async function retrieveIPAddresses(prefix: string, zone?: string) {
@@ -676,7 +698,7 @@ export async function deletePersistentVolumeClaimsCustomLabels(
     console.info(output)
   } catch (error) {
     console.error(error)
-    if (!error.toString().includes('not found')) {
+    if (error instanceof Error && !error.toString().includes('not found')) {
       process.exit(1)
     }
   }
