@@ -57,16 +57,20 @@ spec:
   ports:
   - port: 8545
     name: rpc
-{{- $wsPort := ((.ws_port | default .Values.geth.ws_port) | int) -}}
-{{- if ne $wsPort 8545 }}
+  {{- $wsPort := ((.ws_port | default .Values.geth.ws_port) | int) -}}
+  {{- if ne $wsPort 8545 }}
   - port: {{ $wsPort }}
     name: ws
-{{- end }}
+  {{- end }}
+  {{- if (or .Values.metrics .Values.pprof.enabled) | default false }}
+  - name: metrics
+    port: 6060
+  {{- end }}
   selector:
-{{- if .proxy | default false }}
-{{- $validatorProxied := printf "%s-validators-%d" .Release.Namespace .validator_index }}
+    {{- if .proxy | default false }}
+    {{- $validatorProxied := printf "%s-validators-%d" .Release.Namespace .validator_index }}
     validator-proxied: "{{ $validatorProxied }}"
-{{- end }}
+    {{- end }}
     component: {{ .component_label }}
 ---
 apiVersion: v1

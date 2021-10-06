@@ -14,6 +14,7 @@ export const builder = (argv: yargs.Argv) => {
 }
 
 export const handler = async (argv: OdisInitialArgv) => {
-  await switchToContextCluster(argv.celoEnv, argv.context)
+  await switchToContextCluster(argv.celoEnv, argv.context, true, true)
+  process.exit(0)
   await installODISHelmChart(argv.celoEnv, argv.context)
 }

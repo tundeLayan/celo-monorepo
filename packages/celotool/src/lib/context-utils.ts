@@ -246,3 +246,17 @@ export function addOptionalContextMiddleware(argv: Argv) {
 export function addContextMiddleware(argv: Argv) {
   return addOptionalContextMiddleware(argv).coerce('context', coerceContext)
 }
+
+export function getContextRegionForConfig(config: BaseClusterConfig): string {
+  if ('regionName' in config) {
+    const configAks = config as AksClusterConfig
+    return configAks.regionName
+  } else if ('clusterRegion' in config) {
+    const configAws = config as AwsClusterConfig
+    return configAws.clusterRegion
+  } else if ('zone' in config) {
+    const configGcp = config as GCPClusterConfig
+    return configGcp.zone
+  }
+  return ''
+}

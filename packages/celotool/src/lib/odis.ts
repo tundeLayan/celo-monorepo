@@ -4,21 +4,35 @@ import {
   removeGenericHelmChart,
   upgradeGenericHelmChart,
 } from 'src/lib/helm_deploy'
+import { CloudProvider } from 'src/lib/k8s-cluster/base'
 import {
   createKeyVaultIdentityIfNotExists,
   deleteAzureKeyVaultIdentity,
   getAzureKeyVaultIdentityName,
 } from './azure'
-import { getAksClusterConfig, getContextDynamicEnvVarValues } from './context-utils'
+import {
+  getClusterConfigForContext,
+  getContextDynamicEnvVarValues,
+  getContextRegionForConfig,
+} from './context-utils'
 
 const helmChartPath = '../helm-charts/odis'
 
 /**
  * Information for the Azure Key Vault
  */
-interface ODISSignerKeyVaultConfig {
+interface ODISSignerAKSKeyVaultConfig {
   vaultName: string
   secretName: string
+}
+
+/**
+ * Information for the Azure Key Vault
+ */
+interface ODISSignerGCPKeyVaultConfig {
+  projectId: string
+  secretName: string
+  gcpserviceAccount: string
 }
 
 /**
@@ -45,13 +59,24 @@ interface ODISSignerLoggingConfig {
 const identityNamePrefix = 'ODISSIGNERID'
 
 /**
- * Env vars corresponding to each value for the ODISSignerKeyVaultConfig for a particular context
+ * Env vars corresponding to each value for the ODISSignerAKSKeyVaultConfig for a particular Azure AKS context
  */
-const contextODISSignerKeyVaultConfigDynamicEnvVars: {
-  [k in keyof ODISSignerKeyVaultConfig]: DynamicEnvVar
+const contextODISSignerAKSKeyVaultConfigDynamicEnvVars: {
+  [k in keyof ODISSignerAKSKeyVaultConfig]: DynamicEnvVar
 } = {
   vaultName: DynamicEnvVar.ODIS_SIGNER_AZURE_KEYVAULT_NAME,
   secretName: DynamicEnvVar.ODIS_SIGNER_AZURE_KEYVAULT_SECRET_NAME,
+}
+
+/**
+ * Env vars corresponding to each value for the ODISSignerAKSKeyVaultConfig for a particular Azure AKS context
+ */
+const contextODISSignerGCPKeyVaultConfigDynamicEnvVars: {
+  [k in keyof ODISSignerGCPKeyVaultConfig]: DynamicEnvVar
+} = {
+  projectId: DynamicEnvVar.GCP_PROJECT_NAME,
+  secretName: DynamicEnvVar.ODIS_SIGNER_GCP_SERVICE_ACCOUNT,
+  gcpserviceAccount: DynamicEnvVar.ODIS_SIGNER_GCP_SERVICE_ACCOUNT,
 }
 
 /**
@@ -102,7 +127,7 @@ export async function upgradeODISChart(celoEnv: string, context: string) {
 export async function removeHelmRelease(celoEnv: string, context: string) {
   await removeGenericHelmChart(releaseName(celoEnv, context), celoEnv)
   const keyVaultConfig = getContextDynamicEnvVarValues(
-    contextODISSignerKeyVaultConfigDynamicEnvVars,
+    contextODISSignerAKSKeyVaultConfigDynamicEnvVars,
     context
   )
 
@@ -115,42 +140,66 @@ export async function removeHelmRelease(celoEnv: string, context: string) {
 
 async function helmParameters(celoEnv: string, context: string) {
   const databaseConfig = getContextDynamicEnvVarValues(contextDatabaseConfigDynamicEnvVars, context)
-  const keyVaultConfig = getContextDynamicEnvVarValues(
-    contextODISSignerKeyVaultConfigDynamicEnvVars,
-    context
-  )
 
   const loggingConfig = getContextDynamicEnvVarValues(contextLoggingConfigDynamicEnvVars, context, {
     level: 'trace',
     format: 'stackdriver',
   })
 
-  const clusterConfig = getAksClusterConfig(context)
+  // const clusterConfig = getAksClusterConfig(context)
+  const clusterConfig = getClusterConfigForContext(context)
 
-  return [
+  let params = [
     `--set environment.name=${celoEnv}`,
     `--set environment.cluster.name=${clusterConfig.clusterName}`,
-    `--set environment.cluster.location=${clusterConfig.regionName}`,
+    // TODO: Seems environment.cluster.location is not being used in the chart
+    `--set environment.cluster.location=${getContextRegionForConfig(clusterConfig)}`,
     `--set image.repository=${fetchEnv(envVar.ODIS_SIGNER_DOCKER_IMAGE_REPOSITORY)}`,
     `--set image.tag=${fetchEnv(envVar.ODIS_SIGNER_DOCKER_IMAGE_TAG)}`,
     `--set db.host=${databaseConfig.host}`,
     `--set db.port=${databaseConfig.port}`,
     `--set db.username=${databaseConfig.username}`,
     `--set db.password='${databaseConfig.password}'`,
-    `--set keystore.vaultName=${keyVaultConfig.vaultName}`,
-    `--set keystore.secretName=${keyVaultConfig.secretName}`,
     `--set blockchainProvider=${fetchEnv(envVar.ODIS_SIGNER_BLOCKCHAIN_PROVIDER)}`,
     `--set log.level=${loggingConfig.level}`,
     `--set log.format=${loggingConfig.format}`,
-  ].concat(await ODISSignerKeyVaultIdentityHelmParameters(context, keyVaultConfig))
+  ]
+
+  if (clusterConfig.cloudProvider === CloudProvider.AZURE) {
+    const keyVaultConfig = getContextDynamicEnvVarValues(
+      contextODISSignerAKSKeyVaultConfigDynamicEnvVars,
+      context
+    )
+    params.push(
+      `--set cloudProvider=AZURE`,
+      `--set keystore.vaultName=${keyVaultConfig.vaultName}`,
+      `--set keystore.secretName=${keyVaultConfig.secretName}`
+    )
+    params.push(...(await ODISSignerAKSKeyVaultIdentityHelmParameters(context, keyVaultConfig)))
+  } else if (clusterConfig.cloudProvider === CloudProvider.GCP) {
+    const keyVaultConfig = getContextDynamicEnvVarValues(
+      contextODISSignerGCPKeyVaultConfigDynamicEnvVars,
+      context
+    )
+    params.push(
+      `--set cloudProvider=GCP`,
+      `--set keystore.projectId=${keyVaultConfig.projectId}`,
+      `--set keystore.secretName=${keyVaultConfig.secretName}`,
+      `--set gcpWorkloadIdentity.serviceAccountEmail=${contextODISSignerGCPKeyVaultConfigDynamicEnvVars.gcpserviceAccount}`
+    )
+  }
+
+  return params
 }
 
 /**
- * Returns an array of helm command line parameters for the ODIS Signer key vault identity.
+ * Setups the Azure identity for accessing the Key Vault Secret and use with aad-pod-indetity,
+ * and returns an array with the corresponding helm variables
+ * More info: https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
  */
-async function ODISSignerKeyVaultIdentityHelmParameters(
+async function ODISSignerAKSKeyVaultIdentityHelmParameters(
   context: string,
-  keyVaultConfig: ODISSignerKeyVaultConfig
+  keyVaultConfig: ODISSignerAKSKeyVaultConfig
 ) {
   const azureKVIdentity = await createKeyVaultIdentityIfNotExists(
     context,

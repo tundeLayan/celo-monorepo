@@ -44,8 +44,14 @@ spec:
 {{ include "common.env-var" (dict "name" "DB_HOST" "dict" .Values.db "value_name" "host") | indent 12 }}
 {{ include "common.env-var" (dict "name" "DB_PORT" "dict" .Values.db "value_name" "port") | indent 12 }}
 {{ include "common.env-var" (dict "name" "DB_USERNAME" "dict" .Values.db "value_name" "username") | indent 12 }}
+{{- if eq .Values.cloudProvider "AZURE" }}
 {{ include "common.env-var" (dict "name" "KEYSTORE_AZURE_VAULT_NAME" "dict" .Values.keystore "value_name" "vaultName") | indent 12 }}
 {{ include "common.env-var" (dict "name" "KEYSTORE_AZURE_SECRET_NAME" "dict" .Values.keystore "value_name" "secretName") | indent 12 }}
+{{- end }}
+{{- if eq .Values.cloudProvider "GCP" }}
+{{ include "common.env-var" (dict "name" "KEYSTORE_GOOGLE_PROJECT_ID" "dict" .Values.keystore "value_name" "vaultName") | indent 12 }}
+{{ include "common.env-var" (dict "name" "KEYSTORE_GOOGLE_SECRET_NAME" "dict" .Values.keystore "value_name" "secretName") | indent 12 }}
+{{- end }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:

@@ -222,6 +222,8 @@ export enum DynamicEnvVar {
   ORACLE_ADDRESSES_FROM_MNEMONIC_COUNT = '{{ context }}_{{ currencyPair}}_ORACLE_ADDRESSES_FROM_MNEMONIC_COUNT',
   ODIS_SIGNER_AZURE_KEYVAULT_NAME = '{{ context }}_ODIS_SIGNER_AZURE_KEYVAULT_NAME',
   ODIS_SIGNER_AZURE_KEYVAULT_SECRET_NAME = '{{ context }}_ODIS_SIGNER_AZURE_KEYVAULT_SECRET_NAME',
+  ODIS_SIGNER_GCP_KEYVAULT_SECRET_NAME = '{{ context }}_ODIS_SIGNER_GCP_KEYVAULT_SECRET_NAME',
+  ODIS_SIGNER_GCP_SERVICE_ACCOUNT = '{{ context }}_ODIS_SIGNER_GCP_SERVICE_ACCOUNT',
   ODIS_SIGNER_DB_HOST = '{{ context }}_ODIS_SIGNER_DB_HOST',
   ODIS_SIGNER_DB_PORT = '{{ context }}_ODIS_SIGNER_DB_PORT',
   ODIS_SIGNER_DB_USERNAME = '{{ context }}_ODIS_SIGNER_DB_USERNAME',
@@ -378,7 +380,7 @@ export function addCeloEnvMiddleware(argv: yargs.Argv) {
         demand: 'Please specify a valid CELO_ENV',
         alias: 'e',
         required: true,
-        description: 'the environment in which you want to execute this command',
+        description: 'The environment in which you want to execute this command',
       })
       // @ts-ignore Since we pass it right above, we know that celoEnv will be there at runtime
       .middleware([celoEnvMiddleware])

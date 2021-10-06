@@ -1,3 +1,4 @@
+{{- if .Values.azureKVIdentity }}
 apiVersion: "aadpodidentity.k8s.io/v1"
 kind: AzureIdentityBinding
 metadata:
@@ -5,3 +6,4 @@ metadata:
 spec:
   azureIdentity: {{ template "azure-identity-name" . }}
   selector: {{ template "azure-identity-binding-name" . }}
+{{- end }}

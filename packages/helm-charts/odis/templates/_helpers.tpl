@@ -1,3 +1,4 @@
+{{/* vim: set filetype=mustache: */}}
 {{/*
 The name of the deployment
 */}}
@@ -42,4 +43,11 @@ The name of the azure identity for the odis signer
 */}}
 {{- define "azure-identity-name" -}}
 {{- template "name" . -}}-identity
+{{- end -}}
+
+{{/*
+The name of the K8s Service Account
+*/}}
+{{- define "k8s-service-account" -}}
+{{- default (include "odis.name") .Values.k8sServiceAccountNameOverride -}}
 {{- end -}}

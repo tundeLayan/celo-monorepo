@@ -252,13 +252,16 @@ fi
 {{- if .expose }}
   - name: rpc
     containerPort: 8545
-  - name: ws
-    containerPort: {{ default .Values.geth.ws_port .ws_port }}
-{{ end }}
-{{- if .pprof }}
-  - name: pprof
-    containerPort: {{ .pprof_port }}
-{{ end }}
+{{- $wsPort := ((.ws_port | default .Values.geth.ws_port) | int) -}}
+{{- if ne $wsPort 8545 }}
+  - containerPort: {{ $wsPort }}
+    name: ws
+{{- end }}
+{{- end }}
+{{- if (or .Values.metrics .Values.pprof.enabled) | default false }}
+  - name: metrics
+    containerPort: 6060
+{{- end }}
   resources:
 {{ toYaml .Values.geth.resources | indent 4 }}
   volumeMounts:
