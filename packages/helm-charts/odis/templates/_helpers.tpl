@@ -49,5 +49,29 @@ The name of the azure identity for the odis signer
 The name of the K8s Service Account
 */}}
 {{- define "k8s-service-account" -}}
-{{- default (include "odis.name") .Values.k8sServiceAccountNameOverride -}}
+{{- default (include "name" .) .Values.k8sServiceAccountNameOverride -}}
 {{- end -}}
+
+{{/*
+GCP Cloud sql proxy container
+*/}}
+{{- define "cloudsql-container" -}}
+- command:
+  - /cloud_sql_proxy
+  - -instances=celo-testnet-production:us-west1:alfajores2-replica=tcp:5432
+  - -instances={{ .Values.gcpCloudSQLConnectionString }}
+  - -term_timeout=30s
+  image: gcr.io/cloudsql-docker/gce-proxy:1.19.1
+  imagePullPolicy: IfNotPresent
+  name: cloudsql-proxy
+  resources:
+    requests:
+      cpu: 200m
+      memory: 250Mi
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsUser: 2
+  terminationMessagePath: /dev/termination-log
+  terminationMessagePolicy: File
+{{- end -}}
+

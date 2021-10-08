@@ -15,6 +15,9 @@ spec:
 {{- include "odis-signer-component-label" . | nindent 8 }}
         aadpodidbinding: {{ template "azure-identity-binding-name" . }}
     spec:
+      {{- if eq .Values.cloudProvider "GCP" }}
+      serviceAccountName: {{ include "k8s-service-account" . }}
+      {{- end }}
       containers:
         - name:  odis-signer
           securityContext:

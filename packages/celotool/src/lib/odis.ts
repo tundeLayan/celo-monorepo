@@ -34,6 +34,7 @@ interface ODISSignerGCPKeyVaultConfig {
   secretName: string
   gcpServiceAccount: string
   k8sServiceAccount: string
+  gcpCloudSqlDB: string
 }
 
 /**
@@ -76,9 +77,10 @@ const contextODISSignerGCPKeyVaultConfigDynamicEnvVars: {
   [k in keyof ODISSignerGCPKeyVaultConfig]: DynamicEnvVar
 } = {
   projectId: DynamicEnvVar.GCP_PROJECT_NAME,
-  secretName: DynamicEnvVar.ODIS_SIGNER_GCP_SERVICE_ACCOUNT,
+  secretName: DynamicEnvVar.ODIS_SIGNER_GCP_KEYVAULT_SECRET_NAME,
   gcpServiceAccount: DynamicEnvVar.ODIS_SIGNER_GCP_SERVICE_ACCOUNT,
   k8sServiceAccount: DynamicEnvVar.ODIS_SIGNER_K8S_SERVICE_ACCOUNT,
+  gcpCloudSqlDB: DynamicEnvVar.ODIS_SIGNER_GCP_CLOUDSQL_CONNECTION_STRING,
 }
 
 /**
@@ -187,8 +189,9 @@ async function helmParameters(celoEnv: string, context: string) {
       `--set cloudProvider=GCP`,
       `--set keystore.projectId=${keyVaultConfig.projectId}`,
       `--set keystore.secretName=${keyVaultConfig.secretName}`,
-      `--set gcpWorkloadIdentity.serviceAccountEmail=${contextODISSignerGCPKeyVaultConfigDynamicEnvVars.gcpServiceAccount}`,
-      `--set k8sServiceAccountNameOverride=${contextODISSignerGCPKeyVaultConfigDynamicEnvVars.k8sServiceAccount}`
+      `--set gcpWorkloadIdentity.serviceAccountEmail=${keyVaultConfig.gcpServiceAccount}`,
+      `--set k8sServiceAccountNameOverride=${keyVaultConfig.k8sServiceAccount}`,
+      `--set gcpCloudSQLConnectionString=${keyVaultConfig.gcpServiceAccount}`
     )
   }
 
