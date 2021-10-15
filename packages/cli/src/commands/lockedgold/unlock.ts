@@ -13,18 +13,24 @@ export default class Unlock extends BaseCommand {
   static flags = {
     ...BaseCommand.flags,
     from: Flags.address({ required: true }),
-    value: flags.string({ ...LockedGoldArgs.valueArg, required: true }),
+    value: flags.string({ ...LockedGoldArgs.valueArg, exclusive: ['all'], required: false }),
+    all: flags.boolean({ exclusive: ['value'], required: false }),
   }
 
   static args = []
 
-  static examples = ['unlock --from 0x47e172F6CfB6c7D01C1574fa3E2Be7CC73269D95 --value 500000000']
+  static examples = [
+    'unlock --from 0x47e172F6CfB6c7D01C1574fa3E2Be7CC73269D95 --value 500000000',
+    'unlock --from 0x47e172F6CfB6c7D01C1574fa3E2Be7CC73269D95 --all',
+  ]
 
   async run() {
     const res = this.parse(Unlock)
 
     const lockedgold = await this.kit.contracts.getLockedGold()
-    const value = new BigNumber(res.flags.value)
+    const value = res.flags.all
+      ? await lockedgold.getAccountNonvotingLockedGold(res.flags.from)
+      : new BigNumber(res.flags.value!)
 
     await newCheckBuilder(this, res.flags.from)
       .isAccount(res.flags.from)
