@@ -22,6 +22,6 @@ export default class Show extends BaseCommand {
 
     await newCheckBuilder(this).isAccount(args.account).runChecks()
 
-    printValueMapRecursive(await lockedGold.getAccountSummary(args.account))
+    printValueMapRecursive(await lockedGold.getAccountSummary(args.account, true))
   }
 }

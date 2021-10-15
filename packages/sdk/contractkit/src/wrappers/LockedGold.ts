@@ -13,6 +13,7 @@ import {
   proxySend,
   secondsToDurationString,
   tupleParser,
+  unixSecondsTimestampToDateString,
   valueToBigNumber,
   valueToString,
 } from '../wrappers/BaseWrapper'
@@ -52,6 +53,7 @@ export interface AccountSlashed {
 
 export interface PendingWithdrawal {
   time: BigNumber
+  timestamp?: string
   value: BigNumber
 }
 
@@ -202,12 +204,12 @@ export class LockedGoldWrapper extends BaseWrapper<LockedGold> {
     }
   }
 
-  async getAccountSummary(account: string): Promise<AccountSummary> {
+  async getAccountSummary(account: string, humanReadable = false): Promise<AccountSummary> {
     const nonvoting = await this.getAccountNonvotingLockedGold(account)
     const total = await this.getAccountTotalLockedGold(account)
     const validators = await this.kit.contracts.getValidators()
     const requirement = await validators.getAccountLockedGoldRequirement(account)
-    const pendingWithdrawals = await this.getPendingWithdrawals(account)
+    const pendingWithdrawals = await this.getPendingWithdrawals(account, humanReadable)
     return {
       lockedGold: {
         total,
@@ -223,12 +225,13 @@ export class LockedGoldWrapper extends BaseWrapper<LockedGold> {
    * @param account The address of the account.
    * @return The value and timestamp for each pending withdrawal.
    */
-  async getPendingWithdrawals(account: string) {
+  async getPendingWithdrawals(account: string, humanReadable = false) {
     const withdrawals = await this.contract.methods.getPendingWithdrawals(account).call()
     return zip(
       (time, value): PendingWithdrawal => ({
         time: valueToBigNumber(time),
         value: valueToBigNumber(value),
+        timestamp: humanReadable ? unixSecondsTimestampToDateString(time) : undefined,
       }),
       withdrawals[1],
       withdrawals[0]
