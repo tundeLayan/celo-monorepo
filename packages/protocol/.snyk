@@ -1,0 +1,124 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.22.1
+ignore: {}
+# patches apply the minimum changes required to fix a vulnerability
+patch:
+  SNYK-JS-LODASH-567746:
+    - lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@celo/utils > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - j6 > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - solhint > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-artifactor > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - twilio > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/sol-tracing-utils > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - ethereumjs-vm > async > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - web3-provider-engine > async > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > inquirer > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - solhint > eslint > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-artifactor > async > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-resolver > async > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > truffle-artifactor > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > truffle-config > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/sol-tracing-utils > @0x/dev-utils > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > async > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > remix-lib > async > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - solhint > eslint > inquirer > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - solhint > eslint > table > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > truffle-compile-vyper > eslint > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > truffle-compile-vyper > async > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > truffle-contract > truffle-interface-adapter > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - solidity-bytes-utils > truffle-hdwallet-provider > web3-provider-engine > async > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > truffle-compile-vyper > eslint > table > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - truffle-security > truffle-compile-vyper > truffle-compile > request-promise > request-promise-core > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - web3-provider-engine > eth-block-tracker > @babel/plugin-transform-runtime > @babel/helper-module-imports > @babel/types > lodash:
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-types > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-traverse > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-template > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-classes > babel-helper-define-map > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-sticky-regex > babel-helper-regex > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > babel-generator > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > babel-register > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > async > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > async > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-types > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-traverse > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-template > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-classes > babel-helper-define-map > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-sticky-regex > babel-helper-regex > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > babel-generator > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > babel-register > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-types > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-traverse > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-block-scoping > babel-template > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-classes > babel-helper-define-map > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babel-preset-env > babel-plugin-transform-es2015-sticky-regex > babel-helper-regex > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > babel-generator > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
+    - '@0x/sol-trace > @0x/subproviders > ganache-core > web3-provider-engine > eth-block-tracker > json-rpc-engine > babelify > babel-core > babel-register > lodash':
+        patched: '2021-10-22T23:55:56.101Z'
